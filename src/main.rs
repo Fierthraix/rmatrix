@@ -11,7 +11,7 @@ use config::Config;
 
 fn main() {
     // Get command line args
-    let config = Config::new();
+    let mut config = Config::new();
 
     let term = env::var("TERM").unwrap_or(String::from(""));
 
@@ -45,12 +45,10 @@ fn main() {
             if config.screensaver {
                 finish();
             }
-            match keypress as u8 as char {
-                'q' => {
-                    finish();
-                    break;
-                }
-                _ => {}
+            // Update any config options based on user input
+            let should_break = config.update_from_keypress(keypress as u8 as char);
+            if should_break {
+                break;
             }
         }
     }

@@ -17,6 +17,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Get the new config object based on command line arguments
     pub fn new() -> Self {
         let args = get_args();
 
@@ -54,6 +55,64 @@ impl Config {
             colour: colour,
             rainbow: args.is_present("rainbow"),
         }
+    }
+    pub fn update_from_keypress(&mut self, keypress: char) -> bool {
+        match keypress {
+            'q' => {
+                //TODO: fix this
+                //finish();
+                return true;
+            }
+            'a' => self.async = !self.async,
+            'b' => self.bold = 1,
+            'B' => self.bold = 2,
+            'n' => self.bold = 0,
+            '!' => {
+                self.colour = COLOR_RED;
+                self.rainbow = false;
+                return true;
+            }
+            '@' => {
+                self.colour = COLOR_GREEN;
+                self.rainbow = false;
+                return true;
+            }
+            '#' => {
+                self.colour = COLOR_YELLOW;
+                self.rainbow = false;
+                return true;
+            }
+            '$' => {
+                self.colour = COLOR_BLUE;
+                self.rainbow = false;
+                return true;
+            }
+            '%' => {
+                self.colour = COLOR_MAGENTA;
+                self.rainbow = false;
+                return true;
+            }
+            'r' => {
+                self.rainbow = true;
+                return true;
+            }
+            '^' => {
+                self.colour = COLOR_CYAN;
+                self.rainbow = false;
+                return true;
+            }
+            '&' => {
+                self.colour = COLOR_WHITE;
+                self.rainbow = false;
+            }
+            //TODO: Implement this!
+            //'p' | 'P' =>pause = !pause
+            '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' => {
+                self.update = keypress as usize - 48
+            }
+            _ => {}
+        }
+        false
     }
 }
 
