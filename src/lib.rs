@@ -76,79 +76,59 @@ impl Block {
     }
 }
 
-use clap::{Arg, App, ArgMatches};
+/// ncurses functions calls that set up the screen and set important variables
+pub fn ncurses_init() {
+    initscr();
+    savetty();
+    nonl();
+    cbreak();
+    noecho();
+    timeout(0);
+    leaveok(stdscr(), true);
+    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
-/// Get and parse the command line arguments with clap
-pub fn get_args() -> ArgMatches<'static> {
-    App::new("rmatrix")
-        .version("0.0.1")
-        .about("Shows a scrolling 'Matrix' like screen in linux")
-        .arg(Arg::with_name("async").short("a").help(
-            "Asynchronous scroll",
-        ))
-        .arg(Arg::with_name("b").short("b").group("bold").help(
-            "Bold characters on",
-        ))
-        .arg(Arg::with_name("B").short("B").help(
-            "All bold characters (overrides -b)",
-        ))
-        .arg(Arg::with_name("force").short("f").help(
-            "Force the linux $TERM type to be on",
-        ))
-        .arg(Arg::with_name("console").short("l").help(
-            "Linux mode (use matrix console font)",
-        ))
-        .arg(Arg::with_name("oldstyle").short("o").help(
-            "Use old-style scrolling",
-        ))
-        .arg(Arg::with_name("nobold").short("n").help(
-            "No bold characters (overrides -b and -B, default)",
-        ))
-        .arg(Arg::with_name("screensaver").short("s").help(
-            "\"Screensaver\" mode, exits on first keystroke",
-        ))
-        .arg(Arg::with_name("xwindow").short("x").help(
-            "X window mode, use if your xterm is using mtx.pcf",
-        ))
-        .arg(
-            Arg::with_name("update")
-                .short("u")
-                .value_name("delay")
-                .default_value("4")
-                .validator(|n: String| match n.parse::<u8>() {
-                    Ok(n) => {
-                        if n > 10 {
-                            Err(String::from("the number must be between 0 and 10"))
-                        } else {
-                            Ok(())
-                        }
-                    }
-                    Err(_) => Err(String::from("not a valid number between 0 and 10")),
-                })
-                .hide_default_value(true)
-                .help("delay Screen update delay"),
-        )
-        .arg(
-            Arg::with_name("colour")
-                .short("C")
-                .value_name("color")
-                .default_value("green")
-                .possible_values(
-                    &[
-                        "green",
-                        "red",
-                        "blue",
-                        "white",
-                        "yellow",
-                        "cyan",
-                        "magenta",
-                        "black",
-                    ],
-                )
-                .help("Use this colour for matrix"),
-        )
-        .arg(Arg::with_name("rainbow").short("r").help("Rainbow mode"))
-        .get_matches()
+    // TODO:
+    // handle a SIGINT with finish()
+    // handle a SIGWINCH with handle_sigwinch (terminal window size changed)
+
+    // TODO: use console chars
+    /*
+       #ifdef HAVE_CONSOLECHARS
+       if (console) {
+       va_system("consolechars -d");
+       }
+       #elif defined(HAVE_SETFONT)
+       if (console){
+       va_system("setfont");
+       }
+       #endif
+       */
+
+    if has_colors() {
+        start_color();
+        if use_default_colors() != ERR {
+            init_pair(COLOR_BLACK, -1, -1);
+            init_pair(COLOR_GREEN, COLOR_GREEN, -1);
+            init_pair(COLOR_WHITE, COLOR_WHITE, -1);
+            init_pair(COLOR_RED, COLOR_RED, -1);
+            init_pair(COLOR_CYAN, COLOR_CYAN, -1);
+            init_pair(COLOR_MAGENTA, COLOR_MAGENTA, -1);
+            init_pair(COLOR_BLUE, COLOR_BLUE, -1);
+            init_pair(COLOR_YELLOW, COLOR_YELLOW, -1);
+            println!("a");
+        } else {
+            init_pair(COLOR_BLACK, COLOR_BLACK, COLOR_BLACK);
+            init_pair(COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
+            init_pair(COLOR_WHITE, COLOR_WHITE, COLOR_BLACK);
+            init_pair(COLOR_RED, COLOR_RED, COLOR_BLACK);
+            init_pair(COLOR_CYAN, COLOR_CYAN, COLOR_BLACK);
+            init_pair(COLOR_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
+            init_pair(COLOR_BLUE, COLOR_BLUE, COLOR_BLACK);
+            init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+            println!("b");
+        }
+
+    }
 }
 
 /// Clean up ncurses stuff when we're ready to exit
