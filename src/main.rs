@@ -1,13 +1,10 @@
 extern crate ncurses;
 extern crate rmatrix;
 
-mod config;
-
 use std::env;
-use rmatrix::*;
+use rmatrix::Matrix;
+use rmatrix::config::Config;
 use ncurses::*;
-
-use config::Config;
 
 fn main() {
     // Get command line args
@@ -20,7 +17,7 @@ fn main() {
         env::set_var("TERM", "linux");
     }
 
-    ncurses_init();
+    rmatrix::ncurses_init();
 
     let mut matrix = Matrix::new();
 
@@ -37,7 +34,7 @@ fn main() {
         if keypress != ERR {
             // Exit if you're in screensaver mode
             if config.screensaver {
-                finish();
+                rmatrix::finish();
             }
 
             // Update any config options based on user input
@@ -55,5 +52,5 @@ fn main() {
     if config.force && term.as_str() != "" {
         env::set_var("TERM", term.as_str());
     }
-    finish()
+    rmatrix::finish()
 }

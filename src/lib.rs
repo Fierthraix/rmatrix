@@ -2,7 +2,9 @@ extern crate rand;
 extern crate clap;
 extern crate ncurses;
 
-mod config;
+pub mod config;
+
+use config::Config;
 
 use ncurses::*;
 use rand::{Rng, ThreadRng};
