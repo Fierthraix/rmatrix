@@ -2,28 +2,68 @@ extern crate rand;
 extern crate clap;
 extern crate ncurses;
 
-use ncurses::*;
+mod config;
 
+use ncurses::*;
 use rand::{Rng, ThreadRng};
 
-pub struct Matrix(Vec<Column>);
+pub struct Matrix {
+    m: Vec<Column>,
+    cols: usize,
+    lines: usize,
+    rng: ThreadRng,
+}
 
 impl Matrix {
     /// Create a new matrix with the dimensions of the screen
     pub fn new() -> Self {
+        // Get the screen dimensions
         let (lines, cols) = (COLS() as usize, LINES() as usize);
 
+        // Create a seeded rng
         let mut rng = rand::thread_rng();
 
         // Create the matrix
-        Matrix(
-            (0..cols)
-                .map(|i| if i % 2 == 0 {
-                    Column::new(lines, &mut rng)
-                } else {
-                    Column::zero(lines)
-                })
+        Matrix {
+            m: (0..cols / 2)
+                .map(|_| Column::new(lines, &mut rng))
                 .collect(),
+            cols: cols,
+            lines: lines,
+            rng: rng,
+        }
+    }
+    pub fn cols(&self) -> usize {
+        self.m.len()
+    }
+    pub fn lines(&self) -> usize {
+        self.m[0].col.len()
+    }
+    pub fn arrange(&mut self, count: &mut usize, config: &Config) {
+        let (lines, cols) = (self.m.len(), self.m[0].col.len());
+        let mut rng = self.rng.clone(); // rng is Rc<RefCell<T>>, this avoids closure issues
+
+        let (randnum, randmin, highnum) = if config.console || config.xwindow {
+            (51, 166, 217)
+        } else {
+            (93, 33, 123)
+        };
+
+        self.m.iter_mut().for_each(
+            |col| if !col.head && col.cchar == ' ' &&
+                col.gap > 0
+            {
+                col.gap -= 1;
+            } else if !col.head && col.cchar == ' ' {
+                col.length = rng.gen::<usize>() % (lines - 3) + 3;
+                col.col[0].val = rng.gen::<isize>() % randnum + randmin;
+
+                if rng.gen::<usize>() % 2 == 1 {
+                    col.col[0].bold = 2;
+                }
+
+                col.gap = rng.gen::<usize>() % lines + 1;
+            },
         )
     }
 }
@@ -32,29 +72,21 @@ struct Column {
     length: usize, // The length of the stream
     gap: usize, // The gap between streams
     update: usize, // Update speed
+    head: bool,
+    cchar: char,
     col: Vec<Block>, // The actual column
 }
 
 impl Column {
     /// Return a column keyed by a random number generator
     fn new(lines: usize, rand: &mut ThreadRng) -> Self {
-        let r1: usize = rand.gen();
-        let r2: usize = rand.gen();
-        let r3: usize = rand.gen();
         Column {
-            length: r1 % (lines - 3) + 3,
-            gap: r2 % lines + 1,
-            update: r3 % 3 + 1,
+            length: rand.gen::<usize>() % (lines - 3) + 3,
+            gap: rand.gen::<usize>() % lines + 1,
+            update: rand.gen::<usize>() % 3 + 1,
+            head: false,
+            cchar: ' ',
             col: vec![Block::neg(); lines + 1],
-        }
-    }
-    /// Return a zeroed column with blank values
-    fn zero(lines: usize) -> Self {
-        Column {
-            length: 0,
-            gap: 0,
-            update: 0,
-            col: vec![Block::new(); lines + 1],
         }
     }
 }

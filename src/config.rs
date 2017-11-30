@@ -14,6 +14,8 @@ pub struct Config {
     pub update: usize,
     pub colour: i16,
     pub rainbow: bool,
+    pub pause: bool,
+    pub should_break: bool,
 }
 
 impl Config {
@@ -54,14 +56,16 @@ impl Config {
             update: args.value_of("update").unwrap().parse::<usize>().unwrap(),
             colour: colour,
             rainbow: args.is_present("rainbow"),
+            pause: false,
+            should_break: false,
         }
     }
-    pub fn update_from_keypress(&mut self, keypress: char) -> bool {
+    pub fn update_from_keypress(&mut self, keypress: char) {
         match keypress {
             'q' => {
                 //TODO: fix this
                 //finish();
-                return true;
+                self.should_break = true;
             }
             'a' => self.async = !self.async,
             'b' => self.bold = 1,
@@ -70,49 +74,48 @@ impl Config {
             '!' => {
                 self.colour = COLOR_RED;
                 self.rainbow = false;
-                return true;
+                self.should_break = true;
             }
             '@' => {
                 self.colour = COLOR_GREEN;
                 self.rainbow = false;
-                return true;
+                self.should_break = true;
             }
             '#' => {
                 self.colour = COLOR_YELLOW;
                 self.rainbow = false;
-                return true;
+                self.should_break = true;
             }
             '$' => {
                 self.colour = COLOR_BLUE;
                 self.rainbow = false;
-                return true;
+                self.should_break = true;
             }
             '%' => {
                 self.colour = COLOR_MAGENTA;
                 self.rainbow = false;
-                return true;
+                self.should_break = true;
             }
             'r' => {
                 self.rainbow = true;
-                return true;
+                self.should_break = true;
             }
             '^' => {
                 self.colour = COLOR_CYAN;
                 self.rainbow = false;
-                return true;
+                self.should_break = true;
             }
             '&' => {
                 self.colour = COLOR_WHITE;
                 self.rainbow = false;
+                self.should_break = true;
             }
-            //TODO: Implement this!
-            //'p' | 'P' =>pause = !pause
+            'p' | 'P' => self.pause = !self.pause,
             '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' => {
                 self.update = keypress as usize - 48
             }
             _ => {}
         }
-        false
     }
 }
 

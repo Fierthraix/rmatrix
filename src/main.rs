@@ -22,13 +22,7 @@ fn main() {
 
     ncurses_init();
 
-    let (randnum, randmin, highnum) = if config.console || config.xwindow {
-        (51, 166, 217)
-    } else {
-        (93, 33, 123)
-    };
-
-    let matrix = Matrix::new();
+    let mut matrix = Matrix::new();
 
     let mut count = 0;
     // The main event loop
@@ -45,15 +39,19 @@ fn main() {
             if config.screensaver {
                 finish();
             }
+
             // Update any config options based on user input
-            let should_break = config.update_from_keypress(keypress as u8 as char);
-            if should_break {
+            config.update_from_keypress(keypress as u8 as char);
+            // Check any config changes mean you need to exit the loop
+            if config.should_break {
                 break;
             }
         }
+
+        matrix.arrange(&mut count, &config);
     }
 
-    // Set the old `$TERM` value if you changed it
+    // Reset the old `$TERM` value if you changed it
     if config.force && term.as_str() != "" {
         env::set_var("TERM", term.as_str());
     }
