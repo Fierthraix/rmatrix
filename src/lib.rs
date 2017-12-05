@@ -74,6 +74,21 @@ impl Matrix {
             col.col[0].val = ' ';
             col.length = rng.gen::<usize>() % (lines - 3) + 3;
         });
+        self.move_down();
+    }
+    fn move_down(&mut self) {
+        let lines = self.lines; //TODO: add unit tests for this func
+        // Iterate over all columns and swap spaces
+        self.m.iter_mut().for_each(|col| {
+            let mut tmp = Block::default();
+            let col = &mut col.col; // Alias for inner column of struct
+            for i in 1..lines {
+                let tmp2 = col[i - 1].clone(); //TODO: Check these clones
+                col[i - 1] = tmp;
+                tmp = col[i].clone();
+                col[i] = tmp2;
+            }
+        });
     }
 }
 
@@ -194,4 +209,9 @@ va_system("setfont");
 }
 #endif
 */
+}
+
+#[test]
+fn test_move_down_works() {
+    let matrix = Matrix::new();
 }
