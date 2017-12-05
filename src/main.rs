@@ -2,9 +2,9 @@ extern crate ncurses;
 extern crate rmatrix;
 
 use std::env;
+use ncurses::*;
 use rmatrix::Matrix;
 use rmatrix::config::Config;
-use ncurses::*;
 
 fn main() {
     // Get command line args
