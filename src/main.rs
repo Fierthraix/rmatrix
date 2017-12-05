@@ -10,6 +10,7 @@ fn main() {
     // Get command line args
     let mut config = Config::new();
 
+    // Get `$TERM`
     let term = env::var("TERM").unwrap_or(String::from(""));
 
     // Force `$TERM` to be 'linux' if the user asked

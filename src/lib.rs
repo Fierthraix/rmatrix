@@ -51,31 +51,36 @@ impl Matrix {
             (93, 33, 123)
         };
 
-        self.m.iter_mut().for_each(
-            |col| if !col.head && col.cchar == ' ' &&
-                col.gap > 0
-            {
-                col.gap -= 1;
-            } else if !col.head && col.cchar == ' ' {
-                col.length = rng.gen::<usize>() % (lines - 3) + 3;
-                col.col[0].val = rng.gen::<isize>() % randnum + randmin;
+        self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
+            col.spaces != 0
+        {
+            // Decrement the spaces until the next stream starts
+            col.spaces -= 1;
+        } else if col.head_is_empty() && col.spaces == 0 {
+            // Start the stream
+            col.new_rand_char(&mut rng);
 
-                if rng.gen::<usize>() % 2 == 1 {
-                    col.col[0].bold = 2;
-                }
+            // Decrement length of stream
+            col.length -= 1;
 
-                col.gap = rng.gen::<usize>() % lines + 1;
-            },
-        )
+            // Reset number of spaces until next stream
+            col.spaces = rng.gen::<usize>() % lines + 1;
+        } else if col.length != 0 {
+            // Continue producing stream
+            col.new_rand_char(&mut rng);
+            col.length -= 1;
+        } else {
+            // Display spaces until next stream
+            col.col[0].val = ' ';
+            col.length = rng.gen::<usize>() % (lines - 3) + 3;
+        });
     }
 }
 
 struct Column {
     length: usize, // The length of the stream
-    gap: usize, // The gap between streams
+    spaces: usize, // The spaces between streams
     update: usize, // Update speed
-    head: bool,
-    cchar: char,
     col: Vec<Block>, // The actual column
 }
 
@@ -84,29 +89,35 @@ impl Column {
     fn new(lines: usize, rand: &mut ThreadRng) -> Self {
         Column {
             length: rand.gen::<usize>() % (lines - 3) + 3,
-            gap: rand.gen::<usize>() % lines + 1,
+            spaces: rand.gen::<usize>() % lines + 1,
             update: rand.gen::<usize>() % 3 + 1,
-            head: false,
-            cchar: ' ',
-            col: vec![Block::neg(); lines + 1],
+            col: vec![Block::default(); lines + 1],
+        }
+    }
+    fn head_is_empty(&self) -> bool {
+        self.col[1].val == ' '
+    }
+    fn new_rand_char(&mut self, rng: &mut ThreadRng) {
+        //TODO: add a random character generator
+        let (randnum, randmin) = (93, 33);
+        self.col[0].val = (rng.gen::<u8>() % randnum + randmin) as char; // Random character
+
+        // 50/50 chance the character is bold
+        if rng.gen::<usize>() % 2 == 1 {
+            self.col[1].bold = 2;
         }
     }
 }
 
 #[derive(Clone)]
 struct Block {
-    //val: char,
-    val: isize,
+    val: char,
     bold: usize,
 }
 
-impl Block {
-    fn new() -> Self {
-        //Block { val: ' ', bold: 0 }
-        Block { val: 0, bold: 0 }
-    }
-    fn neg() -> Self {
-        Block { val: -1, bold: 0 }
+impl Default for Block {
+    fn default() -> Self {
+        Block { val: ' ', bold: 0 }
     }
 }
 
