@@ -46,7 +46,7 @@ fn main() {
             }
         }
 
-        matrix.arrange(&mut count, &config);
+        matrix.arrange(&config);
     }
 
     // Reset the old `$TERM` value if you changed it

@@ -41,7 +41,7 @@ impl Matrix {
     pub fn lines(&self) -> usize {
         self.m[0].col.len()
     }
-    pub fn arrange(&mut self, count: &mut usize, config: &Config) {
+    pub fn arrange(&mut self, config: &Config) {
         let (lines, cols) = (self.m.len(), self.m[0].col.len());
         let mut rng = self.rng.clone(); // rng is Rc<RefCell<T>>, this avoids closure issues
 
@@ -85,6 +85,90 @@ impl Matrix {
             })
         });
     }
+    pub fn draw(&self, config: &Config) {
+        for i in 1..(self.lines + 1) {
+            for j in 0..self.cols {
+                mv(i as i32 - 1, j as i32); // Move the cursor
+                if self[i][j].val == '\0' || self[i][j].bold == 2 {
+                    if config.console || config.xwindow {
+                        attron(A_ALTCHARSET as u32);
+                    }
+                    if config.bold == 1 {
+                        //TODO: check this is 1 or 0
+                        attron(A_BOLD as u32);
+                    }
+                    if self[i][j].val == '\0' {
+                        if config.console || config.xwindow {
+                            addch(183);
+                        } else {
+                            addch('&' as u32);
+                        }
+                    } else {
+                        addch(self[i][j].val as u32);
+                    }
+
+                    attroff(COLOR_PAIR(COLOR_WHITE));
+                    if config.bold == 1 {
+                        attroff(A_BOLD as u32);
+                    }
+                    if config.console || config.xwindow {
+                        attroff(A_ALTCHARSET as u32);
+                    }
+                } else {
+                    let mcolor = if config.rainbow {
+                        //TODO: Watch this for range problems (from the % 6)
+                        //TODO: make the rng lazy_static!
+                        match rand::random::<usize>() % 5 {
+                            0 => COLOR_GREEN,
+                            1 => COLOR_BLUE,
+                            2 => COLOR_BLACK,
+                            3 => COLOR_YELLOW,
+                            4 => COLOR_CYAN,
+                            5 => COLOR_MAGENTA,
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        COLOR_GREEN
+                    };
+                    attron(COLOR_PAIR(mcolor));
+                    if self[i][j].val == 1u8 as char {
+                        if config.bold == 1 {
+                            attron(A_BOLD as u32);
+                        }
+                        addch('|' as u32);
+                        if config.bold == 1 {
+                            attroff(A_BOLD as u32);
+                        }
+                    } else {
+                        if config.console || config.xwindow {
+                            attron(A_ALTCHARSET as u32);
+                        }
+                        if config.bold == 2 || (config.bold == 1 && self[i][j].val as u8 % 2 == 0) {
+                            attron(A_BOLD as u32);
+                        }
+                        addch(self[i][j].val as u32);
+                        if config.bold == 2 || (config.bold == 1 && self[i][j].val as u8 % 2 == 0) {
+                            attroff(A_BOLD as u32);
+                        }
+                        if config.console || config.xwindow {
+                            attroff(A_ALTCHARSET as u32);
+                        }
+                    }
+                    attroff(COLOR_PAIR(mcolor));
+                }
+            }
+        }
+        napms(config.update as i32 * 10);
+    }
+}
+
+use std::ops;
+
+impl ops::Index<usize> for Matrix {
+    type Output = Column;
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.m[i]
+    }
 }
 
 use std::fmt;
@@ -120,7 +204,7 @@ impl PartialEq for Matrix {
     }
 }
 
-struct Column {
+pub struct Column {
     length: usize, // The length of the stream
     spaces: usize, // The spaces between streams
     update: usize, // Update speed
@@ -152,6 +236,13 @@ impl Column {
     }
 }
 
+impl ops::Index<usize> for Column {
+    type Output = Block;
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.col[i]
+    }
+}
+
 impl PartialEq for Column {
     fn eq(&self, other: &Column) -> bool {
         for (blk1, blk2) in self.col.iter().zip(other.col.iter()) {
@@ -164,7 +255,7 @@ impl PartialEq for Column {
 }
 
 #[derive(Clone, PartialEq)]
-struct Block {
+pub struct Block {
     val: char,
     bold: usize,
 }
