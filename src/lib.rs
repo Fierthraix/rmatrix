@@ -109,6 +109,17 @@ impl fmt::Debug for Matrix {
     }
 }
 
+impl PartialEq for Matrix {
+    fn eq(&self, other: &Matrix) -> bool {
+        for (col1, col2) in self.m.iter().zip(other.m.iter()) {
+            if col1 != col2 {
+                return false;
+            }
+        }
+        true
+    }
+}
+
 struct Column {
     length: usize, // The length of the stream
     spaces: usize, // The spaces between streams
@@ -141,7 +152,18 @@ impl Column {
     }
 }
 
-#[derive(Clone)]
+impl PartialEq for Column {
+    fn eq(&self, other: &Column) -> bool {
+        for (blk1, blk2) in self.col.iter().zip(other.col.iter()) {
+            if blk1 != blk2 {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+#[derive(Clone, PartialEq)]
 struct Block {
     val: char,
     bold: usize,
@@ -297,5 +319,5 @@ fn test_move_down_works() {
     };
 
     matrix.move_down();
-    assert_eq!(format!("{:?}", matrix), format!("{:?}", matrix2));
+    assert_eq!(matrix, matrix2);
 }
