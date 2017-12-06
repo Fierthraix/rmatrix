@@ -20,16 +20,14 @@ impl Matrix {
     /// Create a new matrix with the dimensions of the screen
     pub fn new() -> Self {
         // Get the screen dimensions
-        let (lines, cols) = (COLS() as usize, LINES() as usize);
+        let (lines, cols) = (LINES() as usize + 1, COLS() as usize / 2);
 
         // Create a seeded rng
         let mut rng = rand::thread_rng();
 
         // Create the matrix
         Matrix {
-            m: (0..cols / 2)
-                .map(|_| Column::new(lines, &mut rng))
-                .collect(),
+            m: (0..cols).map(|_| Column::new(lines, &mut rng)).collect(),
             cols: cols,
             lines: lines,
             rng: rng,
@@ -41,15 +39,9 @@ impl Matrix {
     pub fn lines(&self) -> usize {
         self.m[0].col.len()
     }
-    pub fn arrange(&mut self, config: &Config) {
-        let (lines, cols) = (self.m.len(), self.m[0].col.len());
+    pub fn arrange(&mut self) {
+        let lines = self.lines;
         let mut rng = self.rng.clone(); // rng is Rc<RefCell<T>>, this avoids closure issues
-
-        let (randnum, randmin, highnum) = if config.console || config.xwindow {
-            (51, 166, 217)
-        } else {
-            (93, 33, 123)
-        };
 
         self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
             col.spaces != 0
@@ -86,9 +78,10 @@ impl Matrix {
         });
     }
     pub fn draw(&self, config: &Config) {
-        for i in 1..(self.lines + 1) {
-            for j in 0..self.cols {
-                mv(i as i32 - 1, j as i32); // Move the cursor
+
+        for j in 1..self.lines {
+            for i in 0..self.cols {
+                mv(j as i32 - 1, 2 * i as i32); // Move the cursor
                 if self[i][j].val == '\0' || self[i][j].bold == 2 {
                     if config.console || config.xwindow {
                         attron(A_ALTCHARSET as u32);
@@ -177,9 +170,9 @@ impl fmt::Debug for Matrix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut lines = vec![String::with_capacity(self.cols); self.lines];
         self.m.iter().for_each(|col| {
-            col.col.iter().enumerate().for_each(|(i, val)| {
-                lines[i].push(col.col[i].val)
-            })
+            col.col.iter().enumerate().for_each(
+                |(i, val)| lines[i].push(val.val),
+            )
         });
         let matrix = lines.into_iter().fold(
             String::with_capacity(self.lines * self.cols),
@@ -218,7 +211,7 @@ impl Column {
             length: rand.gen::<usize>() % (lines - 3) + 3,
             spaces: rand.gen::<usize>() % lines + 1,
             update: rand.gen::<usize>() % 3 + 1,
-            col: vec![Block::default(); lines + 1],
+            col: vec![Block::default(); lines],
         }
     }
     fn head_is_empty(&self) -> bool {
@@ -349,7 +342,7 @@ fn test_move_down_works() {
     let mut matrix = Matrix {
         rng: rand::thread_rng(),
         lines: 4,
-        cols: 4,
+        cols: 3,
         m: vec![
             Column {
                 length: 2,
@@ -369,18 +362,12 @@ fn test_move_down_works() {
                 update: 2,
                 col: vec![block('i'), block('j'), block('k'), block('l')],
             },
-            Column {
-                length: 2,
-                spaces: 1,
-                update: 2,
-                col: vec![block('m'), block('n'), block('o'), block('p')],
-            },
         ],
     };
     let matrix2 = Matrix {
         rng: rand::thread_rng(),
         lines: 4,
-        cols: 4,
+        cols: 3,
         m: vec![
             Column {
                 length: 2,
@@ -400,15 +387,10 @@ fn test_move_down_works() {
                 update: 2,
                 col: vec![block(' '), block('i'), block('j'), block('k')],
             },
-            Column {
-                length: 2,
-                spaces: 1,
-                update: 2,
-                col: vec![block(' '), block('m'), block('n'), block('o')],
-            },
         ],
     };
 
     matrix.move_down();
+    println!("{:?}\n{:?}", matrix, matrix2);
     assert_eq!(matrix, matrix2);
 }

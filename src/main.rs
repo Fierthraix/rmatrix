@@ -46,7 +46,8 @@ fn main() {
             }
         }
 
-        matrix.arrange(&config);
+        matrix.arrange();
+        matrix.draw(&config);
     }
 
     // Reset the old `$TERM` value if you changed it
