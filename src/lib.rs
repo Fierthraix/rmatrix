@@ -92,6 +92,28 @@ impl Matrix {
     }
 }
 
+use std::fmt;
+
+impl fmt::Debug for Matrix {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut lines = vec![String::with_capacity(self.cols); self.lines];
+        self.m.iter().for_each(|col| {
+            col.col.iter().enumerate().for_each(|(i, val)| {
+                lines[i].push(col.col[i].val)
+            })
+        });
+        let matrix = lines.into_iter().fold(
+            String::with_capacity(self.lines * self.cols),
+            |mut acc, m| {
+                acc += &m;
+                acc += "\n";
+                acc
+            },
+        );
+        write!(f, "{}", matrix)
+    }
+}
+
 struct Column {
     length: usize, // The length of the stream
     spaces: usize, // The spaces between streams
@@ -213,5 +235,41 @@ va_system("setfont");
 
 #[test]
 fn test_move_down_works() {
-    let matrix = Matrix::new();
+    fn block(c: char) -> Block {
+        Block { val: c, bold: 0 }
+    }
+    let mut matrix = Matrix {
+        rng: rand::thread_rng(),
+        lines: 4,
+        cols: 4,
+        m: vec![
+            Column {
+                length: 2,
+                spaces: 1,
+                update: 2,
+                col: vec![block('a'), block('b'), block('c'), block('d')],
+            },
+            Column {
+                length: 2,
+                spaces: 1,
+                update: 2,
+                col: vec![block('e'), block('f'), block('g'), block('h')],
+            },
+            Column {
+                length: 2,
+                spaces: 1,
+                update: 2,
+                col: vec![block('i'), block('j'), block('k'), block('l')],
+            },
+            Column {
+                length: 2,
+                spaces: 1,
+                update: 2,
+                col: vec![block('m'), block('n'), block('o'), block('p')],
+            },
+        ],
+    };
+    println!("{:?}", matrix);
+    matrix.move_down();
+    println!("{:?}", matrix);
 }
