@@ -33,13 +33,7 @@ impl Matrix {
             rng: rng,
         }
     }
-    pub fn cols(&self) -> usize {
-        self.m.len()
-    }
-    pub fn lines(&self) -> usize {
-        self.m[0].col.len()
-    }
-    pub fn arrange(&mut self) {
+    pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
         let mut rng = self.rng.clone(); // rng is Rc<RefCell<T>>, this avoids closure issues
 
@@ -66,9 +60,13 @@ impl Matrix {
             col.col[0].val = ' ';
             col.length = rng.gen::<usize>() % (lines - 3) + 3;
         });
-        self.move_down();
+        if config.oldstyle {
+            self.old_style_move_down();
+        } else {
+            //self.move_down();
+        }
     }
-    fn move_down(&mut self) {
+    fn old_style_move_down(&mut self) {
         // Iterate over all columns and swap spaces
         self.m.iter_mut().for_each(|col| {
             let mut tmp = Block::default(); // Blank space at head
@@ -78,7 +76,6 @@ impl Matrix {
         });
     }
     pub fn draw(&self, config: &Config) {
-
         for j in 1..self.lines {
             for i in 0..self.cols {
                 mv(j as i32 - 1, 2 * i as i32); // Move the cursor
@@ -335,7 +332,7 @@ va_system("setfont");
 }
 
 #[test]
-fn test_move_down_works() {
+fn test_old_style_move_down_works() {
     fn block(c: char) -> Block {
         Block { val: c, bold: 0 }
     }
@@ -390,7 +387,7 @@ fn test_move_down_works() {
         ],
     };
 
-    matrix.move_down();
+    matrix.old_style_move_down();
     println!("{:?}\n{:?}", matrix, matrix2);
     assert_eq!(matrix, matrix2);
 }

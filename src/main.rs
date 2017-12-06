@@ -46,7 +46,7 @@ fn main() {
             }
         }
 
-        matrix.arrange();
+        matrix.arrange(&config);
         matrix.draw(&config);
     }
 
