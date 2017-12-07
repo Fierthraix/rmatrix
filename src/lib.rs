@@ -63,8 +63,29 @@ impl Matrix {
         if config.oldstyle {
             self.old_style_move_down();
         } else {
-            //self.move_down();
+            self.move_down();
         }
+    }
+    fn move_down(&mut self) {
+        let mut rng = self.rng.clone();
+        self.m.iter_mut().for_each(|col| {
+            // Reset for each column
+            let mut in_stream = false;
+            col.col.iter_mut().for_each(|mut block| {
+                if !in_stream {
+                    if !block.is_space() {
+                        block.val = ' ';
+                        in_stream = true; // We're now in a stream
+                    }
+                } else {
+                    if block.is_space() {
+                        // New rand char for head of stream
+                        block.val = (rng.gen::<u8>() % 93 + 33) as char;
+                        in_stream = false;
+                    }
+                }
+            })
+        })
     }
     fn old_style_move_down(&mut self) {
         // Iterate over all columns and swap spaces
@@ -221,6 +242,7 @@ impl Column {
 
         // 50/50 chance the character is bold
         if rng.gen::<usize>() % 2 == 1 {
+            //TODO: find out why this is 1
             self.col[1].bold = 2;
         }
     }
@@ -248,6 +270,12 @@ impl PartialEq for Column {
 pub struct Block {
     val: char,
     bold: usize,
+}
+
+impl Block {
+    fn is_space(&self) -> bool {
+        self.val == ' '
+    }
 }
 
 impl Default for Block {
@@ -336,6 +364,7 @@ fn test_old_style_move_down_works() {
     fn block(c: char) -> Block {
         Block { val: c, bold: 0 }
     }
+
     let mut matrix = Matrix {
         rng: rand::thread_rng(),
         lines: 4,
