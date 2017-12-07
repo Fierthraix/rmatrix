@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate lazy_static;
 extern crate rand;
 extern crate ncurses;
 extern crate term_size;
@@ -7,13 +9,17 @@ pub mod config;
 use config::Config;
 
 use ncurses::*;
-use rand::{Rng, ThreadRng};
+use std::sync::Mutex;
+use rand::{Rand, Rng, XorShiftRng};
+
+lazy_static!{
+    static ref RNG: MRng = MRng::new();
+}
 
 pub struct Matrix {
     m: Vec<Column>,
     cols: usize,
     lines: usize,
-    rng: ThreadRng,
 }
 
 impl Matrix {
@@ -27,20 +33,15 @@ impl Matrix {
             }
         };
 
-        // Create a seeded rng
-        let mut rng = rand::thread_rng();
-
         // Create the matrix
         Matrix {
-            m: (0..cols).map(|_| Column::new(lines, &mut rng)).collect(),
+            m: (0..cols).map(|_| Column::new(lines)).collect(),
             cols: cols,
             lines: lines,
-            rng: rng,
         }
     }
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
-        let mut rng = self.rng.clone(); // rng is Rc<RefCell<T>>, this avoids closure issues
 
         self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
             col.spaces != 0
@@ -49,21 +50,21 @@ impl Matrix {
             col.spaces -= 1;
         } else if col.head_is_empty() && col.spaces == 0 {
             // Start the stream
-            col.new_rand_char(&mut rng);
+            col.new_rand_char();
 
             // Decrement length of stream
             col.length -= 1;
 
             // Reset number of spaces until next stream
-            col.spaces = rng.gen::<usize>() % lines + 1;
+            col.spaces = RNG.gen::<usize>() % lines + 1;
         } else if col.length != 0 {
             // Continue producing stream
-            col.new_rand_char(&mut rng);
+            col.new_rand_char();
             col.length -= 1;
         } else {
             // Display spaces until next stream
             col.col[0].val = ' ';
-            col.length = rng.gen::<usize>() % (lines - 3) + 3;
+            col.length = RNG.gen::<usize>() % (lines - 3) + 3;
         });
         if config.oldstyle {
             self.old_style_move_down();
@@ -72,11 +73,10 @@ impl Matrix {
         }
     }
     fn move_down(&mut self) {
-        let mut rng = self.rng.clone();
         self.m.iter_mut().for_each(|col| {
             // Reset for each column
             let mut in_stream = false;
-            col.col.iter_mut().for_each(|mut block| {
+            col.col.iter_mut().for_each(|block| {
                 if !in_stream {
                     if !block.is_space() {
                         block.val = ' ';
@@ -85,7 +85,7 @@ impl Matrix {
                 } else {
                     if block.is_space() {
                         // New rand char for head of stream
-                        block.val = (rng.gen::<u8>() % 93 + 33) as char;
+                        block.val = (RNG.gen::<u8>() % 93 + 33) as char;
                         in_stream = false;
                     }
                 }
@@ -133,8 +133,7 @@ impl Matrix {
                 } else {
                     let mcolor = if config.rainbow {
                         //TODO: Watch this for range problems (from the % 6)
-                        //TODO: make the rng lazy_static!
-                        match rand::random::<usize>() % 5 {
+                        match RNG.gen::<usize>() % 5 {
                             0 => COLOR_GREEN,
                             1 => COLOR_BLUE,
                             2 => COLOR_BLACK,
@@ -229,24 +228,24 @@ pub struct Column {
 
 impl Column {
     /// Return a column keyed by a random number generator
-    fn new(lines: usize, rand: &mut ThreadRng) -> Self {
+    fn new(lines: usize) -> Self {
         Column {
-            length: rand.gen::<usize>() % (lines - 3) + 3,
-            spaces: rand.gen::<usize>() % lines + 1,
-            update: rand.gen::<usize>() % 3 + 1,
+            length: RNG.gen::<usize>() % (lines - 3) + 3,
+            spaces: RNG.gen::<usize>() % lines + 1,
+            update: RNG.gen::<usize>() % 3 + 1,
             col: vec![Block::default(); lines],
         }
     }
     fn head_is_empty(&self) -> bool {
         self.col[1].val == ' '
     }
-    fn new_rand_char(&mut self, rng: &mut ThreadRng) {
+    fn new_rand_char(&mut self) {
         //TODO: add a random character generator
         let (randnum, randmin) = (93, 33);
-        self.col[0].val = (rng.gen::<u8>() % randnum + randmin) as char; // Random character
+        self.col[0].val = (RNG.gen::<u8>() % randnum + randmin) as char; // Random character
 
         // 50/50 chance the character is bold
-        if rng.gen::<usize>() % 2 == 1 {
+        if RNG.gen::<usize>() % 2 == 1 {
             //TODO: find out why this is 1
             self.col[1].bold = 2;
         }
@@ -286,6 +285,20 @@ impl Block {
 impl Default for Block {
     fn default() -> Self {
         Block { val: ' ', bold: 0 }
+    }
+}
+
+struct MRng(Mutex<XorShiftRng>);
+
+impl MRng {
+    fn new() -> Self {
+        MRng(Mutex::new(rand::weak_rng()))
+    }
+    fn gen<T: Rand>(&self) -> T {
+        match self.0.lock() {
+            Ok(mut rng) => rng.gen::<T>(),
+            Err(e) => panic!("{}", e),
+        }
     }
 }
 
@@ -381,7 +394,6 @@ c_die("Cannot resize window!");
 #endif /* HAVE_WRESIZE */
 #endif /* HAVE_RESIZETERM */
 
-var_init();
 */
 
     // Resize the ncurses window appropriately
