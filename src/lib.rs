@@ -28,7 +28,13 @@ impl Matrix {
         // Get the screen dimensions
         let (lines, cols) = {
             match term_size::dimensions() {
-                Some((width, height)) => (height + 1, width / 2),
+                Some((width, height)) => {
+                    if width % 2 != 0 {
+                        (height + 1, (width / 2) + 1)
+                    } else {
+                        (height + 1, width / 2)
+                    }
+                }
                 None => (10, 10),
             }
         };
