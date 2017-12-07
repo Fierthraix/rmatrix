@@ -191,39 +191,6 @@ impl ops::Index<usize> for Matrix {
     }
 }
 
-use std::fmt;
-
-impl fmt::Debug for Matrix {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut lines = vec![String::with_capacity(self.cols); self.lines];
-        self.m.iter().for_each(|col| {
-            col.col.iter().enumerate().for_each(
-                |(i, val)| lines[i].push(val.val),
-            )
-        });
-        let matrix = lines.into_iter().fold(
-            String::with_capacity(self.lines * self.cols),
-            |mut acc, m| {
-                acc += &m;
-                acc += "\n";
-                acc
-            },
-        );
-        write!(f, "{}", matrix)
-    }
-}
-
-impl PartialEq for Matrix {
-    fn eq(&self, other: &Matrix) -> bool {
-        for (col1, col2) in self.m.iter().zip(other.m.iter()) {
-            if col1 != col2 {
-                return false;
-            }
-        }
-        true
-    }
-}
-
 pub struct Column {
     length: usize, // The length of the stream
     spaces: usize, // The spaces between streams
@@ -262,18 +229,7 @@ impl ops::Index<usize> for Column {
     }
 }
 
-impl PartialEq for Column {
-    fn eq(&self, other: &Column) -> bool {
-        for (blk1, blk2) in self.col.iter().zip(other.col.iter()) {
-            if blk1 != blk2 {
-                return false;
-            }
-        }
-        true
-    }
-}
-
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Block {
     val: char,
     bold: usize,
