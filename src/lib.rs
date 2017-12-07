@@ -137,7 +137,7 @@ impl Matrix {
                         attroff(A_ALTCHARSET as u32);
                     }
                 } else {
-                    let mcolor = if config.rainbow {
+                    let mcolour = if config.rainbow {
                         match RNG.gen::<usize>() % 6 {
                             0 => COLOR_GREEN,
                             1 => COLOR_BLUE,
@@ -148,9 +148,9 @@ impl Matrix {
                             _ => unreachable!(),
                         }
                     } else {
-                        COLOR_GREEN
+                        config.colour
                     };
-                    attron(COLOR_PAIR(mcolor));
+                    attron(COLOR_PAIR(mcolour));
                     if self[i][j].val == 1u8 as char {
                         if config.bold == 1 {
                             attron(A_BOLD as u32);
@@ -174,7 +174,7 @@ impl Matrix {
                             attroff(A_ALTCHARSET as u32);
                         }
                     }
-                    attroff(COLOR_PAIR(mcolor));
+                    attroff(COLOR_PAIR(mcolour));
                 }
             }
         }

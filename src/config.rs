@@ -61,8 +61,6 @@ impl Config {
     pub fn update_from_keypress(&mut self, keypress: char) {
         match keypress {
             'q' => {
-                //TODO: fix this
-                //finish();
                 self.should_break = true;
             }
             'b' => self.bold = 1,
@@ -71,41 +69,33 @@ impl Config {
             '!' => {
                 self.colour = COLOR_RED;
                 self.rainbow = false;
-                self.should_break = true;
             }
             '@' => {
                 self.colour = COLOR_GREEN;
                 self.rainbow = false;
-                self.should_break = true;
             }
             '#' => {
                 self.colour = COLOR_YELLOW;
                 self.rainbow = false;
-                self.should_break = true;
             }
             '$' => {
                 self.colour = COLOR_BLUE;
                 self.rainbow = false;
-                self.should_break = true;
             }
             '%' => {
                 self.colour = COLOR_MAGENTA;
                 self.rainbow = false;
-                self.should_break = true;
             }
             'r' => {
                 self.rainbow = true;
-                self.should_break = true;
             }
             '^' => {
                 self.colour = COLOR_CYAN;
                 self.rainbow = false;
-                self.should_break = true;
             }
             '&' => {
                 self.colour = COLOR_WHITE;
                 self.rainbow = false;
-                self.should_break = true;
             }
             'p' | 'P' => self.pause = !self.pause,
             '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' => {
