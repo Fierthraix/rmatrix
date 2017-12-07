@@ -310,17 +310,6 @@ pub fn finish() {
     resetty();
     endwin();
     std::process::exit(0);
-    /*
-#ifdef HAVE_CONSOLECHARS
-if (console) {
-va_system("consolechars -d");
-}
-#elif defined(HAVE_SETFONT)
-if (console){
-va_system("setfont");
-}
-#endif
-*/
 }
 
 /// ncurses functions calls that set up the screen and set important variables
@@ -333,23 +322,6 @@ pub fn ncurses_init() {
     timeout(0);
     leaveok(stdscr(), true);
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-
-    // TODO:
-    // handle a SIGINT with finish()
-    // handle a SIGWINCH with handle_sigwinch (terminal window size changed)
-
-    // TODO: use console chars
-    /*
-       #ifdef HAVE_CONSOLECHARS
-       if (console) {
-       va_system("consolechars -d");
-       }
-       #elif defined(HAVE_SETFONT)
-       if (console){
-       va_system("setfont");
-       }
-       #endif
-       */
 
     if has_colors() {
         start_color();
@@ -376,34 +348,7 @@ pub fn ncurses_init() {
 }
 
 pub fn resize_window() {
-    /*
-       tty = ttyname(0);
-       if (!tty) {
-       return;
-       }
-       fd = open(tty, O_RDWR);
-       if (fd == -1) {
-       return;
-       }
-#ifdef HAVE_RESIZETERM
-resizeterm(LINES, COLS);
-#ifdef HAVE_WRESIZE
-if (wresize(stdscr, LINES, COLS) == ERR) {
-c_die("Cannot resize window!");
-}
-#endif /* HAVE_WRESIZE */
-#endif /* HAVE_RESIZETERM */
-
-*/
-
-    // Resize the ncurses window appropriately
-    let (lines, cols) = match term_size::dimensions() {
-        Some((lines, cols)) => (lines as i32, cols as i32),
-        None => (10, 10),
-    };
-    wresize(stdscr(), lines, cols);
-
-    // Refresh ncurses
-    clear();
-    refresh();
+    //TODO: Find a way to do this without exiting ncurses
+    endwin();
+    initscr();
 }
