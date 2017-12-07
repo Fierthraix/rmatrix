@@ -133,7 +133,7 @@ impl Matrix {
                 } else {
                     let mcolor = if config.rainbow {
                         //TODO: Watch this for range problems (from the % 6)
-                        match RNG.gen::<usize>() % 5 {
+                        match RNG.gen::<usize>() % 6 {
                             0 => COLOR_GREEN,
                             1 => COLOR_BLUE,
                             2 => COLOR_BLACK,
