@@ -1,19 +1,17 @@
-extern crate rand;
 extern crate ncurses;
 extern crate term_size;
 
 pub mod config;
+pub mod randxor;
 
 use config::Config;
 
 use ncurses::*;
-use rand::{Rng, XorShiftRng};
 
 pub struct Matrix {
     m: Vec<Column>,
     cols: usize,
     lines: usize,
-    rng: XorShiftRng,
 }
 
 impl Matrix {
@@ -27,20 +25,16 @@ impl Matrix {
             }
         };
 
-        let mut rng = rand::weak_rng();
-
         // Create the matrix
         Matrix {
-            m: (0..cols).map(|_| Column::new(lines, &mut rng)).collect(),
+            m: (0..cols).map(|_| Column::new(lines)).collect(),
             cols: cols,
             lines: lines,
-            rng: rng,
         }
     }
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
 
-        let mut rng = self.rng.clone();
         self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
             col.spaces != 0
         {
@@ -48,21 +42,21 @@ impl Matrix {
             col.spaces -= 1;
         } else if col.head_is_empty() && col.spaces == 0 {
             // Start the stream
-            col.new_rand_char(&mut rng);
+            col.new_rand_char();
 
             // Decrement length of stream
             col.length -= 1;
 
             // Reset number of spaces until next stream
-            col.spaces = rng.gen::<usize>() % lines + 1;
+            col.spaces = randxor::gen() % lines + 1;
         } else if col.length != 0 {
             // Continue producing stream
-            col.new_rand_char(&mut rng);
+            col.new_rand_char();
             col.length -= 1;
         } else {
             // Display spaces until next stream
             col.col[0].val = ' ';
-            col.length = rng.gen::<usize>() % (lines - 3) + 3;
+            col.length = randxor::gen() % (lines - 3) + 3;
         });
         if config.oldstyle {
             self.old_style_move_down();
@@ -71,7 +65,6 @@ impl Matrix {
         }
     }
     fn move_down(&mut self) {
-        let mut rng = self.rng.clone();
         self.m.iter_mut().for_each(|col| {
             // Reset for each column
             let mut in_stream = false;
@@ -84,7 +77,7 @@ impl Matrix {
                 } else {
                     if block.is_space() {
                         // New rand char for head of stream
-                        block.val = (rng.gen::<u8>() % 93 + 33) as char;
+                        block.val = randxor::gen_char();
                         in_stream = false;
                     }
                 }
@@ -132,8 +125,7 @@ impl Matrix {
                 } else {
                     let mcolor = if config.rainbow {
                         //TODO: Watch this for range problems (from the % 6)
-                        let mut rng = self.rng.clone();
-                        match rng.gen::<usize>() % 6 {
+                        match randxor::gen() % 6 {
                             0 => COLOR_GREEN,
                             1 => COLOR_BLUE,
                             2 => COLOR_BLACK,
@@ -228,24 +220,22 @@ pub struct Column {
 
 impl Column {
     /// Return a column keyed by a random number generator
-    fn new(lines: usize, rng: &mut XorShiftRng) -> Self {
+    fn new(lines: usize) -> Self {
         Column {
-            length: rng.gen::<usize>() % (lines - 3) + 3,
-            spaces: rng.gen::<usize>() % lines + 1,
-            update: rng.gen::<usize>() % 3 + 1,
+            length: randxor::gen() % (lines - 3) + 3,
+            spaces: randxor::gen() % lines + 1,
+            update: randxor::gen() % 3 + 1,
             col: vec![Block::default(); lines],
         }
     }
     fn head_is_empty(&self) -> bool {
         self.col[1].val == ' '
     }
-    fn new_rand_char(&mut self, rng: &mut XorShiftRng) {
-        //TODO: add a random character generator
-        let (randnum, randmin) = (93, 33);
-        self.col[0].val = (rng.gen::<u8>() % randnum + randmin) as char; // Random character
+    fn new_rand_char(&mut self) {
+        self.col[0].val = randxor::gen_char();
 
         // 50/50 chance the character is bold
-        if rng.gen::<usize>() % 2 == 1 {
+        if randxor::gen() % 2 == 1 {
             //TODO: find out why this is 1
             self.col[1].bold = 2;
         }
