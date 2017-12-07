@@ -4,7 +4,6 @@ use ncurses::*;
 use self::clap::{Arg, App, ArgMatches};
 
 pub struct Config {
-    pub async: bool,
     pub bold: isize,
     pub force: bool,
     pub console: bool,
@@ -46,7 +45,6 @@ impl Config {
         };
 
         Config {
-            async: args.is_present("async"),
             bold: bold,
             force: args.is_present("force"),
             console: args.is_present("console"),
@@ -67,7 +65,6 @@ impl Config {
                 //finish();
                 self.should_break = true;
             }
-            'a' => self.async = !self.async,
             'b' => self.bold = 1,
             'B' => self.bold = 2,
             'n' => self.bold = 0,
@@ -124,9 +121,6 @@ fn get_args() -> ArgMatches<'static> {
     App::new("rmatrix")
         .version("0.0.1")
         .about("Shows a scrolling 'Matrix' like screen in linux")
-        .arg(Arg::with_name("async").short("a").help(
-            "Asynchronous scroll",
-        ))
         .arg(Arg::with_name("b").short("b").group("bold").help(
             "Bold characters on",
         ))

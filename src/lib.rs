@@ -138,7 +138,6 @@ impl Matrix {
                     }
                 } else {
                     let mcolor = if config.rainbow {
-                        //TODO: Watch this for range problems (from the % 6)
                         match RNG.gen::<usize>() % 6 {
                             0 => COLOR_GREEN,
                             1 => COLOR_BLUE,
@@ -228,7 +227,6 @@ impl PartialEq for Matrix {
 pub struct Column {
     length: usize, // The length of the stream
     spaces: usize, // The spaces between streams
-    update: usize, // Update speed
     col: Vec<Block>, // The actual column
 }
 
@@ -238,7 +236,6 @@ impl Column {
         Column {
             length: RNG.gen::<usize>() % (lines - 3) + 3,
             spaces: RNG.gen::<usize>() % lines + 1,
-            update: RNG.gen::<usize>() % 3 + 1,
             col: vec![Block::default(); lines],
         }
     }
