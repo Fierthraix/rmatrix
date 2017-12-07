@@ -1,6 +1,6 @@
 extern crate rand;
-extern crate clap;
 extern crate ncurses;
+extern crate term_size;
 
 pub mod config;
 
@@ -20,7 +20,12 @@ impl Matrix {
     /// Create a new matrix with the dimensions of the screen
     pub fn new() -> Self {
         // Get the screen dimensions
-        let (lines, cols) = (LINES() as usize + 1, COLS() as usize / 2);
+        let (lines, cols) = {
+            match term_size::dimensions() {
+                Some((width, height)) => (height + 1, width / 2),
+                None => (10, 10),
+            }
+        };
 
         // Create a seeded rng
         let mut rng = rand::thread_rng();
@@ -284,6 +289,27 @@ impl Default for Block {
     }
 }
 
+/// Clean up ncurses stuff when we're ready to exit
+pub fn finish() {
+    curs_set(CURSOR_VISIBILITY::CURSOR_VISIBLE);
+    clear();
+    refresh();
+    resetty();
+    endwin();
+    std::process::exit(0);
+    /*
+#ifdef HAVE_CONSOLECHARS
+if (console) {
+va_system("consolechars -d");
+}
+#elif defined(HAVE_SETFONT)
+if (console){
+va_system("setfont");
+}
+#endif
+*/
+}
+
 /// ncurses functions calls that set up the screen and set important variables
 pub fn ncurses_init() {
     initscr();
@@ -323,7 +349,6 @@ pub fn ncurses_init() {
             init_pair(COLOR_MAGENTA, COLOR_MAGENTA, -1);
             init_pair(COLOR_BLUE, COLOR_BLUE, -1);
             init_pair(COLOR_YELLOW, COLOR_YELLOW, -1);
-            println!("a");
         } else {
             init_pair(COLOR_BLACK, COLOR_BLACK, COLOR_BLACK);
             init_pair(COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
@@ -333,28 +358,40 @@ pub fn ncurses_init() {
             init_pair(COLOR_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
             init_pair(COLOR_BLUE, COLOR_BLUE, COLOR_BLACK);
             init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
-            println!("b");
         }
-
     }
 }
 
-/// Clean up ncurses stuff when we're ready to exit
-pub fn finish() {
-    curs_set(CURSOR_VISIBILITY::CURSOR_VISIBLE);
+pub fn resize_window() {
+    /*
+       tty = ttyname(0);
+       if (!tty) {
+       return;
+       }
+       fd = open(tty, O_RDWR);
+       if (fd == -1) {
+       return;
+       }
+#ifdef HAVE_RESIZETERM
+resizeterm(LINES, COLS);
+#ifdef HAVE_WRESIZE
+if (wresize(stdscr, LINES, COLS) == ERR) {
+c_die("Cannot resize window!");
+}
+#endif /* HAVE_WRESIZE */
+#endif /* HAVE_RESIZETERM */
+
+var_init();
+*/
+
+    // Resize the ncurses window appropriately
+    let (lines, cols) = match term_size::dimensions() {
+        Some((lines, cols)) => (lines as i32, cols as i32),
+        None => (10, 10),
+    };
+    wresize(stdscr(), lines, cols);
+
+    // Refresh ncurses
     clear();
     refresh();
-    resetty();
-    endwin();
-    /*
-#ifdef HAVE_CONSOLECHARS
-if (console) {
-va_system("consolechars -d");
-}
-#elif defined(HAVE_SETFONT)
-if (console){
-va_system("setfont");
-}
-#endif
-*/
 }
