@@ -23,24 +23,26 @@ fn main() {
         env::set_var("TERM", "linux");
     }
 
-    // Save the terminal and start up ncurses
+    // Save the terminal state and start up ncurses
     rmatrix::ncurses_init();
 
-    // Listen for UNIX signals
+    // Register for UNIX signals
     let signal = chan_signal::notify(&[Signal::INT, Signal::WINCH]);
 
+    // Create the board
     let mut matrix = Matrix::new();
 
-    // The main event loop
+    // Main event loop
     loop {
-
-        // Check for signals
+        // Check for SIGINT or SIGWINCH
         chan_select! {
             default => {},
             signal.recv() -> signal => {
                 if let Some(signal) = signal {
                     match signal {
+                        // Terminate ncurses properly on SIGINT
                         Signal::INT => rmatrix::finish(),
+                        // Redraw the screen on SIGWINCH
                         Signal::WINCH => {
                             rmatrix::resize_window();
                             matrix = Matrix::new();
@@ -51,16 +53,15 @@ fn main() {
             },
         }
 
-
         // Handle a keypress
         let keypress = wgetch(stdscr());
         if keypress != ERR {
-            // Exit if you're in screensaver mode
+            // Exit if in screensaver mode
             if config.screensaver {
                 rmatrix::finish();
             }
 
-            // Update any config options based on user input
+            // Update config based on user input
             config.update_from_keypress(keypress as u8 as char);
             // Check any config changes mean you need to exit the loop
             if config.should_break {
@@ -68,6 +69,7 @@ fn main() {
             }
         }
 
+        // Updaate and redraw the board
         matrix.arrange(&config);
         matrix.draw(&config);
     }

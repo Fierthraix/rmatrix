@@ -30,6 +30,7 @@ impl Matrix {
             match term_size::dimensions() {
                 Some((width, height)) => {
                     if width % 2 != 0 {
+                        // Makes odd-columned screens print on the rightmost edge
                         (height + 1, (width / 2) + 1)
                     } else {
                         (height + 1, width / 2)
@@ -46,6 +47,7 @@ impl Matrix {
             lines: lines,
         }
     }
+    /// Make the next iteration of matrix
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
 
@@ -107,6 +109,7 @@ impl Matrix {
             })
         });
     }
+    /// Draw the matrix on the screen
     pub fn draw(&self, config: &Config) {
         for j in 1..self.lines {
             for i in 0..self.cols {
