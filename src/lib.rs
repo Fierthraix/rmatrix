@@ -57,8 +57,8 @@ impl Matrix {
             // Decrement the spaces until the next stream starts
             col.spaces -= 1;
         } else if col.head_is_empty() && col.spaces == 0 {
-            // Start the stream
-            col.new_rand_char();
+            // Start a new stream
+            col.new_rand_head();
 
             // Decrement length of stream
             col.length -= 1;
@@ -84,19 +84,24 @@ impl Matrix {
         self.m.iter_mut().for_each(|col| {
             // Reset for each column
             let mut in_stream = false;
+
+            let mut last_was_white = false; // Keep track of white heads
+
             col.col.iter_mut().for_each(|block| {
+
                 if !in_stream {
                     if !block.is_space() {
                         block.val = ' ';
                         in_stream = true; // We're now in a stream
                     }
-                } else {
-                    if block.is_space() {
-                        // New rand char for head of stream
-                        block.val = (RNG.gen::<u8>() % 93 + 33) as char;
-                        in_stream = false;
-                    }
+                } else if block.is_space() {
+                    // New rand char for head of stream
+                    block.val = RNG.rand_char();
+                    block.white = last_was_white;
+                    in_stream = false;
                 }
+                // Swapped to "pass on" whiteness and prepare the variable for the next iteration
+                std::mem::swap(&mut last_was_white, &mut block.white);
             })
         })
     }
@@ -111,74 +116,31 @@ impl Matrix {
     }
     /// Draw the matrix on the screen
     pub fn draw(&self, config: &Config) {
+        //TODO: Refactor this to cache mcolour and reduce calls to `attron`/`attroff`
+        //TODO: Use an iterator or something nicer
         for j in 1..self.lines {
             for i in 0..self.cols {
                 mv(j as i32 - 1, 2 * i as i32); // Move the cursor
-                if self[i][j].val == '\0' || self[i][j].bold == 2 {
-                    if config.console || config.xwindow {
-                        attron(A_ALTCHARSET as u32);
+                // Pick the colour we need
+                let mcolour = if config.rainbow {
+                    match RNG.gen::<usize>() % 6 {
+                        0 => COLOR_GREEN,
+                        1 => COLOR_BLUE,
+                        2 => COLOR_WHITE,
+                        3 => COLOR_YELLOW,
+                        4 => COLOR_CYAN,
+                        5 => COLOR_MAGENTA,
+                        _ => unreachable!(),
                     }
-                    if config.bold == 1 {
-                        //TODO: check this is 1 or 0
-                        attron(A_BOLD as u32);
-                    }
-                    if self[i][j].val == '\0' {
-                        if config.console || config.xwindow {
-                            addch(183);
-                        } else {
-                            addch('&' as u32);
-                        }
-                    } else {
-                        addch(self[i][j].val as u32);
-                    }
-
-                    attroff(COLOR_PAIR(COLOR_WHITE));
-                    if config.bold == 1 {
-                        attroff(A_BOLD as u32);
-                    }
-                    if config.console || config.xwindow {
-                        attroff(A_ALTCHARSET as u32);
-                    }
+                } else if self[i][j].white {
+                    COLOR_WHITE
                 } else {
-                    let mcolour = if config.rainbow {
-                        match RNG.gen::<usize>() % 6 {
-                            0 => COLOR_GREEN,
-                            1 => COLOR_BLUE,
-                            2 => COLOR_BLACK,
-                            3 => COLOR_YELLOW,
-                            4 => COLOR_CYAN,
-                            5 => COLOR_MAGENTA,
-                            _ => unreachable!(),
-                        }
-                    } else {
-                        config.colour
-                    };
-                    attron(COLOR_PAIR(mcolour));
-                    if self[i][j].val == 1u8 as char {
-                        if config.bold == 1 {
-                            attron(A_BOLD as u32);
-                        }
-                        addch('|' as u32);
-                        if config.bold == 1 {
-                            attroff(A_BOLD as u32);
-                        }
-                    } else {
-                        if config.console || config.xwindow {
-                            attron(A_ALTCHARSET as u32);
-                        }
-                        if config.bold == 2 || (config.bold == 1 && self[i][j].val as u8 % 2 == 0) {
-                            attron(A_BOLD as u32);
-                        }
-                        addch(self[i][j].val as u32);
-                        if config.bold == 2 || (config.bold == 1 && self[i][j].val as u8 % 2 == 0) {
-                            attroff(A_BOLD as u32);
-                        }
-                        if config.console || config.xwindow {
-                            attroff(A_ALTCHARSET as u32);
-                        }
-                    }
-                    attroff(COLOR_PAIR(mcolour));
-                }
+                    config.colour
+                };
+                // Draw the character
+                attron(COLOR_PAIR(mcolour));
+                addch(self[i][j].val as u32);
+                attroff(COLOR_PAIR(mcolour));
             }
         }
         napms(config.update as i32 * 10);
@@ -213,15 +175,12 @@ impl Column {
         self.col[1].val == ' '
     }
     fn new_rand_char(&mut self) {
-        //TODO: add a random character generator
-        let (randnum, randmin) = (93, 33);
-        self.col[0].val = (RNG.gen::<u8>() % randnum + randmin) as char; // Random character
-
-        // 50/50 chance the character is bold
-        if RNG.gen::<usize>() % 2 == 1 {
-            //TODO: find out why this is 1
-            self.col[1].bold = 2;
-        }
+        self.col[0].val = RNG.rand_char();
+    }
+    fn new_rand_head(&mut self) {
+        self.col[0].val = RNG.rand_char();
+        // 50/50 chance the head is white
+        self.col[0].white = RNG.coin_flip();
     }
 }
 
@@ -236,6 +195,7 @@ impl ops::Index<usize> for Column {
 pub struct Block {
     val: char,
     bold: usize,
+    white: bool,
 }
 
 impl Block {
@@ -246,7 +206,11 @@ impl Block {
 
 impl Default for Block {
     fn default() -> Self {
-        Block { val: ' ', bold: 0 }
+        Block {
+            val: ' ',
+            bold: 0,
+            white: false,
+        }
     }
 }
 
@@ -259,6 +223,16 @@ impl MRng {
     fn gen<T: Rand>(&self) -> T {
         match self.0.lock() {
             Ok(mut rng) => rng.gen::<T>(),
+            Err(e) => panic!("{}", e),
+        }
+    }
+    fn rand_char(&self) -> char {
+        let (randnum, randmin) = (93, 33);
+        (self.gen::<u8>() % randnum + randmin) as char
+    }
+    fn coin_flip(&self) -> bool {
+        match self.0.lock() {
+            Ok(mut rng) => rng.gen_weighted_bool(2),
             Err(e) => panic!("{}", e),
         }
     }
