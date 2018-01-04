@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
 extern crate rand;
 extern crate pancurses;
 extern crate term_size;
@@ -9,11 +7,23 @@ pub mod config;
 use config::Config;
 
 use pancurses::*;
-use std::sync::Mutex;
+use std::cell::RefCell;
 use rand::{Rand, Rng, XorShiftRng};
 
-lazy_static!{
-    static ref RNG: MRng = MRng::new();
+thread_local!{
+    static RNG: RefCell<XorShiftRng> = RefCell::new(rand::weak_rng());
+}
+
+fn gen<T: Rand>() -> T {
+    RNG.with(|rng| (*rng).borrow_mut().gen::<T>())
+}
+fn rand_char() -> char {
+    let (randnum, randmin) = (93, 33);
+    (RNG.with(|rng| (*rng).borrow_mut().gen::<u8>() % randnum + randmin) as char)
+
+}
+fn coin_flip() -> bool {
+    RNG.with(|rng| (*rng).borrow_mut().gen_weighted_bool(2))
 }
 
 pub struct Matrix {
@@ -64,7 +74,7 @@ impl Matrix {
             col.length -= 1;
 
             // Reset number of spaces until next stream
-            col.spaces = RNG.gen::<usize>() % lines + 1;
+            col.spaces = gen::<usize>() % lines + 1;
         } else if col.length != 0 {
             // Continue producing stream
             col.new_rand_char();
@@ -72,7 +82,7 @@ impl Matrix {
         } else {
             // Display spaces until next stream
             col.col[0].val = ' ';
-            col.length = RNG.gen::<usize>() % (lines - 3) + 3;
+            col.length = gen::<usize>() % (lines - 3) + 3;
         });
         if config.oldstyle {
             self.old_style_move_down();
@@ -96,7 +106,7 @@ impl Matrix {
                     }
                 } else if block.is_space() {
                     // New rand char for head of stream
-                    block.val = RNG.rand_char();
+                    block.val = rand_char();
                     block.white = last_was_white;
                     in_stream = false;
                 }
@@ -123,7 +133,7 @@ impl Matrix {
                 window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
                 // Pick the colour we need
                 let mcolour = if config.rainbow {
-                    match RNG.gen::<usize>() % 6 {
+                    match gen::<usize>() % 6 {
                         0 => COLOR_GREEN,
                         1 => COLOR_BLUE,
                         2 => COLOR_WHITE,
@@ -166,8 +176,8 @@ impl Column {
     /// Return a column keyed by a random number generator
     fn new(lines: usize) -> Self {
         Column {
-            length: RNG.gen::<usize>() % (lines - 3) + 3,
-            spaces: RNG.gen::<usize>() % lines + 1,
+            length: gen::<usize>() % (lines - 3) + 3,
+            spaces: gen::<usize>() % lines + 1,
             col: vec![Block::default(); lines],
         }
     }
@@ -175,12 +185,12 @@ impl Column {
         self.col[1].val == ' '
     }
     fn new_rand_char(&mut self) {
-        self.col[0].val = RNG.rand_char();
+        self.col[0].val = rand_char();
     }
     fn new_rand_head(&mut self) {
-        self.col[0].val = RNG.rand_char();
+        self.col[0].val = rand_char();
         // 50/50 chance the head is white
-        self.col[0].white = RNG.coin_flip();
+        self.col[0].white = coin_flip();
     }
 }
 
@@ -208,30 +218,6 @@ impl Default for Block {
         Block {
             val: ' ',
             white: false,
-        }
-    }
-}
-
-struct MRng(Mutex<XorShiftRng>);
-
-impl MRng {
-    fn new() -> Self {
-        MRng(Mutex::new(rand::weak_rng()))
-    }
-    fn gen<T: Rand>(&self) -> T {
-        match self.0.lock() {
-            Ok(mut rng) => rng.gen::<T>(),
-            Err(e) => panic!("{}", e),
-        }
-    }
-    fn rand_char(&self) -> char {
-        let (randnum, randmin) = (93, 33);
-        (self.gen::<u8>() % randnum + randmin) as char
-    }
-    fn coin_flip(&self) -> bool {
-        match self.0.lock() {
-            Ok(mut rng) => rng.gen_weighted_bool(2),
-            Err(e) => panic!("{}", e),
         }
     }
 }
