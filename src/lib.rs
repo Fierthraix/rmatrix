@@ -1,14 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate rand;
-extern crate ncurses;
+extern crate pancurses;
 extern crate term_size;
 
 pub mod config;
 
 use config::Config;
 
-use ncurses::*;
+use pancurses::*;
 use std::sync::Mutex;
 use rand::{Rand, Rng, XorShiftRng};
 
@@ -115,12 +115,12 @@ impl Matrix {
         });
     }
     /// Draw the matrix on the screen
-    pub fn draw(&self, config: &Config) {
+    pub fn draw(&self, window: &Window, config: &Config) {
         //TODO: Refactor this to cache mcolour and reduce calls to `attron`/`attroff`
         //TODO: Use an iterator or something nicer
         for j in 1..self.lines {
             for i in 0..self.cols {
-                mv(j as i32 - 1, 2 * i as i32); // Move the cursor
+                window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
                 // Pick the colour we need
                 let mcolour = if config.rainbow {
                     match RNG.gen::<usize>() % 6 {
@@ -138,9 +138,9 @@ impl Matrix {
                     config.colour
                 };
                 // Draw the character
-                attron(COLOR_PAIR(mcolour));
-                addch(self[i][j].val as u32);
-                attroff(COLOR_PAIR(mcolour));
+                window.attron(COLOR_PAIR(mcolour as u32));
+                window.addch(self[i][j].val as u32);
+                window.attroff(COLOR_PAIR(mcolour as u32));
             }
         }
         napms(config.update as i32 * 10);
@@ -238,24 +238,21 @@ impl MRng {
 
 /// Clean up ncurses stuff when we're ready to exit
 pub fn finish() {
-    curs_set(CURSOR_VISIBILITY::CURSOR_VISIBLE);
-    clear();
-    refresh();
-    resetty();
+    curs_set(1);
     endwin();
     std::process::exit(0);
 }
 
 /// ncurses functions calls that set up the screen and set important variables
-pub fn ncurses_init() {
-    initscr();
-    savetty();
+pub fn ncurses_init() -> Window {
+    let window = initscr();
+    window.nodelay(true);
+    window.refresh();
+
+    noecho();
     nonl();
     cbreak();
-    noecho();
-    timeout(0);
-    leaveok(stdscr(), true);
-    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+    curs_set(0);
 
     if has_colors() {
         start_color();
@@ -279,6 +276,8 @@ pub fn ncurses_init() {
             init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
         }
     }
+
+    window
 }
 
 pub fn resize_window() {
