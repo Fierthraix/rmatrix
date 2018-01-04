@@ -36,19 +36,7 @@ impl Matrix {
     /// Create a new matrix with the dimensions of the screen
     pub fn new() -> Self {
         // Get the screen dimensions
-        let (lines, cols) = {
-            match term_size::dimensions() {
-                Some((width, height)) => {
-                    if width % 2 != 0 {
-                        // Makes odd-columned screens print on the rightmost edge
-                        (height + 1, (width / 2) + 1)
-                    } else {
-                        (height + 1, width / 2)
-                    }
-                }
-                None => (10, 10),
-            }
-        };
+        let (lines, cols) = get_term_size();
 
         // Create the matrix
         Matrix {
@@ -264,6 +252,27 @@ pub fn ncurses_init() -> Window {
     }
 
     window
+}
+
+fn get_term_size() -> (usize, usize) {
+    match term_size::dimensions() {
+        Some((mut width, mut height)) => {
+            // Minimum size for terminal
+            if width < 10 {
+                width = 10
+            }
+            if height < 10 {
+                height = 10
+            }
+            if width % 2 != 0 {
+                // Makes odd-columned screens print on the rightmost edge
+                (height + 1, (width / 2) + 1)
+            } else {
+                (height + 1, width / 2)
+            }
+        }
+        None => (10, 10),
+    }
 }
 
 pub fn resize_window() {
