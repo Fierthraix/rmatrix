@@ -10,5 +10,3 @@ chan = "0.1"
 pancurses = "0.13"
 term_size = "0.3"
 chan-signal = "0.3"
-lazy_static = "1.0"
-
