@@ -1,6 +1,6 @@
 extern crate clap;
 
-use ncurses::*;
+use pancurses::*;
 use self::clap::{Arg, App, ArgMatches};
 
 pub struct Config {

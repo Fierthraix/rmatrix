@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate chan;
-extern crate ncurses;
+extern crate pancurses;
 extern crate rmatrix;
 extern crate chan_signal;
 
 use std::env;
-use ncurses::*;
+use pancurses::*;
 use chan_signal::Signal;
 
 use rmatrix::Matrix;
@@ -24,7 +24,7 @@ fn main() {
     }
 
     // Save the terminal state and start up ncurses
-    rmatrix::ncurses_init();
+    let window = rmatrix::ncurses_init();
 
     // Register for UNIX signals
     let signal = chan_signal::notify(&[Signal::INT, Signal::WINCH]);
@@ -54,29 +54,33 @@ fn main() {
         }
 
         // Handle a keypress
-        let keypress = wgetch(stdscr());
-        if keypress != ERR {
+        if let Some(keypress) = window.getch() {
             // Exit if in screensaver mode
             if config.screensaver {
                 rmatrix::finish();
             }
 
             // Update config based on user input
-            config.update_from_keypress(keypress as u8 as char);
+            if let Input::Character(c) = keypress {
+                config.update_from_keypress(c)
+            }
+
             // Check any config changes mean you need to exit the loop
             if config.should_break {
                 break;
             }
+
         }
 
         // Updaate and redraw the board
         matrix.arrange(&config);
-        matrix.draw(&config);
+        matrix.draw(&window, &config);
     }
 
     // Reset the old `$TERM` value if you changed it
     if config.force && term.as_str() != "" {
         env::set_var("TERM", term.as_str());
     }
-    rmatrix::finish()
+
+    endwin();
 }
