@@ -3,9 +3,12 @@ extern crate clap;
 use pancurses::*;
 use self::clap::{Arg, App, ArgMatches};
 
+//TODO: Refactor this to be nicer
+
 pub struct Config {
     pub bold: isize,
     pub force: bool,
+    pub kana: bool,
     pub console: bool,
     pub oldstyle: bool,
     pub screensaver: bool,
@@ -47,6 +50,7 @@ impl Config {
         Config {
             bold: bold,
             force: args.is_present("force"),
+            kana: args.is_present("kana"),
             console: args.is_present("console"),
             oldstyle: args.is_present("oldstyle"),
             screensaver: args.is_present("screensaver"),
@@ -112,66 +116,67 @@ fn get_args() -> ArgMatches<'static> {
         .version("0.0.1")
         .about("Shows a scrolling 'Matrix' like screen in linux")
         .arg(Arg::with_name("b").short("b").group("bold").help(
-            "Bold characters on",
-        ))
+                "Bold characters on",
+                ))
         .arg(Arg::with_name("B").short("B").help(
-            "All bold characters (overrides -b)",
-        ))
+                "All bold characters (overrides -b)",
+                ))
+        .arg(Arg::with_name("kana").short("k").long("kana").help("Use Kana instead of ASCII"))
         .arg(Arg::with_name("force").short("f").help(
-            "Force the linux $TERM type to be on",
-        ))
+                "Force the linux $TERM type to be on",
+                ))
         .arg(Arg::with_name("console").short("l").help(
-            "Linux mode (use matrix console font)",
-        ))
+                "Linux mode (use matrix console font)",
+                ))
         .arg(Arg::with_name("oldstyle").short("o").help(
-            "Use old-style scrolling",
-        ))
+                "Use old-style scrolling",
+                ))
         .arg(Arg::with_name("nobold").short("n").help(
-            "No bold characters (overrides -b and -B, default)",
-        ))
+                "No bold characters (overrides -b and -B, default)",
+                ))
         .arg(Arg::with_name("screensaver").short("s").help(
-            "\"Screensaver\" mode, exits on first keystroke",
-        ))
+                "\"Screensaver\" mode, exits on first keystroke",
+                ))
         .arg(Arg::with_name("xwindow").short("x").help(
-            "X window mode, use if your xterm is using mtx.pcf",
-        ))
+                "X window mode, use if your xterm is using mtx.pcf",
+                ))
         .arg(
             Arg::with_name("update")
-                .short("u")
-                .value_name("delay")
-                .default_value("4")
-                .validator(|n: String| match n.parse::<u8>() {
-                    Ok(n) => {
-                        if n > 10 {
-                            Err(String::from("the number must be between 0 and 10"))
-                        } else {
-                            Ok(())
-                        }
+            .short("u")
+            .value_name("delay")
+            .default_value("4")
+            .validator(|n: String| match n.parse::<u8>() {
+                Ok(n) => {
+                    if n > 10 {
+                        Err(String::from("the number must be between 0 and 10"))
+                    } else {
+                        Ok(())
                     }
-                    Err(_) => Err(String::from("not a valid number between 0 and 10")),
-                })
-                .hide_default_value(true)
-                .help("delay Screen update delay"),
-        )
+                }
+                Err(_) => Err(String::from("not a valid number between 0 and 10")),
+            })
+            .hide_default_value(true)
+            .help("delay Screen update delay"),
+            )
         .arg(
             Arg::with_name("colour")
-                .short("C")
-                .value_name("color")
-                .default_value("green")
-                .possible_values(
-                    &[
-                        "green",
-                        "red",
-                        "blue",
-                        "white",
-                        "yellow",
-                        "cyan",
-                        "magenta",
-                        "black",
-                    ],
+            .short("C")
+            .value_name("color")
+            .default_value("green")
+            .possible_values(
+                &[
+                "green",
+                "red",
+                "blue",
+                "white",
+                "yellow",
+                "cyan",
+                "magenta",
+                "black",
+                ],
                 )
-                .help("Use this colour for matrix"),
-        )
+            .help("Use this colour for matrix"),
+            )
         .arg(Arg::with_name("rainbow").short("r").help("Rainbow mode"))
         .get_matches()
 }

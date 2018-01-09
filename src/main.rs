@@ -72,7 +72,7 @@ fn main() {
 
         }
 
-        // Updaate and redraw the board
+        // Update and redraw the board
         matrix.arrange(&config);
         matrix.draw(&window, &config);
     }

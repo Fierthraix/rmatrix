@@ -20,7 +20,9 @@ fn gen<T: Rand>() -> T {
 fn rand_char() -> char {
     let (randnum, randmin) = (93, 33);
     (RNG.with(|rng| (*rng).borrow_mut().gen::<u8>() % randnum + randmin) as char)
-
+}
+fn rand_kana() -> String {
+    RNG.with(|rng| String::from_utf16(&vec![(*rng).borrow_mut().gen_range(0xff62, 0xff9e)]).unwrap())
 }
 fn coin_flip() -> bool {
     RNG.with(|rng| (*rng).borrow_mut().gen())
@@ -56,7 +58,7 @@ impl Matrix {
                                        col.spaces -= 1;
                                    } else if col.head_is_empty() && col.spaces == 0 {
                                        // Start a new stream
-                                       col.new_rand_head();
+                                       col.new_rand_head(&config);
 
                                        // Decrement length of stream
                                        col.length -= 1;
@@ -65,20 +67,20 @@ impl Matrix {
                                        col.spaces = gen::<usize>() % lines + 1;
                                    } else if col.length != 0 {
                                        // Continue producing stream
-                                       col.new_rand_char();
+                                       col.new_rand_char(&config);
                                        col.length -= 1;
                                    } else {
                                        // Display spaces until next stream
-                                       col.col[0].val = ' ';
+                                       col.col[0] = Block::default();
                                        col.length = gen::<usize>() % (lines - 3) + 3;
                                    });
         if config.oldstyle {
             self.old_style_move_down();
         } else {
-            self.move_down();
+            self.move_down(config);
         }
     }
-    fn move_down(&mut self) {
+    fn move_down(&mut self, config: &Config) {
         self.m.iter_mut().for_each(|col| {
             // Reset for each column
             let mut in_stream = false;
@@ -89,17 +91,17 @@ impl Matrix {
 
                 if !in_stream {
                     if !block.is_space() {
-                        block.val = ' ';
+                        block.make_space();
                         in_stream = true; // We're now in a stream
                     }
                 } else if block.is_space() {
                     // New rand char for head of stream
-                    block.val = rand_char();
-                    block.white = last_was_white;
+                    block.new_rand(config);
+                    block.set_white(last_was_white);
                     in_stream = false;
                 }
                 // Swapped to "pass on" whiteness and prepare the variable for the next iteration
-                std::mem::swap(&mut last_was_white, &mut block.white);
+                block.set_white(last_was_white);
             })
         })
     }
@@ -130,14 +132,15 @@ impl Matrix {
                         5 => COLOR_MAGENTA,
                         _ => unreachable!(),
                     }
-                } else if self[i][j].white {
+                } else if self[i][j].white() {
                     COLOR_WHITE
                 } else {
                     config.colour
                 };
                 // Draw the character
                 window.attron(COLOR_PAIR(mcolour as u32));
-                window.addch(self[i][j].val as u32);
+                //window.addch(self[i][j].val as u32);
+                self[i][j].draw(&window);
                 window.attroff(COLOR_PAIR(mcolour as u32));
             }
         }
@@ -170,15 +173,15 @@ impl Column {
         }
     }
     fn head_is_empty(&self) -> bool {
-        self.col[1].val == ' '
+        self.col[1].is_space()
     }
-    fn new_rand_char(&mut self) {
-        self.col[0].val = rand_char();
+    fn new_rand_char(&mut self, config: &Config) {
+        self.col[0] = Block::rand_block(&config);
     }
-    fn new_rand_head(&mut self) {
-        self.col[0].val = rand_char();
+    fn new_rand_head(&mut self, config: &Config) {
+        self.col[0] = Block::rand_block(&config);
         // 50/50 chance the head is white
-        self.col[0].white = coin_flip();
+        self.col[0].set_white(coin_flip());
     }
 }
 
@@ -189,23 +192,78 @@ impl ops::Index<usize> for Column {
     }
 }
 
-#[derive(Clone)]
-pub struct Block {
-    val: char,
-    white: bool,
+pub enum Block {
+    Ascii((char, bool)),
+    Kana((String, bool)),
+    Empty,
 }
 
 impl Block {
-    fn is_space(&self) -> bool {
-        self.val == ' '
+    fn draw(&self, window: &Window) {
+        match *self {
+            Block::Ascii((val, _)) => {window.addch(val);},
+            Block::Kana((ref val, _)) => {window.addstr(&val);},
+            Block::Empty => {},
+        }
+    }
+    pub fn is_space(&self) -> bool {
+        match *self {
+            Block::Empty => true,
+            _ => false
+        }
+    }
+    pub fn new_rand(&mut self, config: &Config) {
+        if config.kana {
+            std::mem::swap(self, &mut Block::rand_block(config))
+        } else {
+
+        }
+    }
+    pub fn rand_block(config: &Config) -> Self {
+        if config.kana {
+            Block::Kana((rand_kana(), false))
+        } else {
+            Block::Ascii((rand_char(), false))
+        }
+    }
+    pub fn rand_head(config: &Config) -> Self {
+        if config.kana {
+            Block::Kana((rand_kana(), coin_flip()))
+        } else {
+            Block::Ascii((rand_char(), coin_flip()))
+        }
+    }
+    pub fn white(&self) -> bool {
+        match *self {
+            Block::Ascii((_, white)) => white,
+            Block::Kana((_, white)) => white,
+            Block::Empty => false
+        }
+    }
+    pub fn set_white(&mut self, new_white: bool) {
+        match *self {
+            Block::Ascii((_, mut white)) => white = new_white,
+            Block::Kana((_, mut white)) => white = new_white,
+            Block::Empty => {}
+        }
+    }
+    pub fn make_space(&mut self) {
+        std::mem::swap(self, &mut Block::default())
     }
 }
 
 impl Default for Block {
     fn default() -> Self {
-        Block {
-            val: ' ',
-            white: false,
+        Block::Empty
+    }
+}
+
+impl Clone for Block {
+    fn clone(&self) -> Self {
+        match *self {
+            Block::Ascii((val, white)) => Block::Ascii((val, white)),
+            Block::Kana((ref val, white)) => Block::Kana((val.clone(), white)),
+            Block::Empty => Block::Empty,
         }
     }
 }
