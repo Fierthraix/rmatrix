@@ -22,7 +22,7 @@ fn rand_char() -> char {
     (RNG.with(|rng| (*rng).borrow_mut().gen::<u8>() % randnum + randmin) as char)
 }
 fn rand_kana() -> String {
-    RNG.with(|rng| String::from_utf16(&vec![(*rng).borrow_mut().gen_range(0xff62, 0xff9e)]).unwrap())
+    RNG.with(|rng| String::from_utf16(&[(*rng).borrow_mut().gen_range(0xff62, 0xff9e)]).unwrap())
 }
 fn coin_flip() -> bool {
     RNG.with(|rng| (*rng).borrow_mut().gen())
@@ -58,7 +58,7 @@ impl Matrix {
                                        col.spaces -= 1;
                                    } else if col.head_is_empty() && col.spaces == 0 {
                                        // Start a new stream
-                                       col.new_rand_head(&config);
+                                       col.new_rand_head(config);
 
                                        // Decrement length of stream
                                        col.length -= 1;
@@ -67,7 +67,7 @@ impl Matrix {
                                        col.spaces = gen::<usize>() % lines + 1;
                                    } else if col.length != 0 {
                                        // Continue producing stream
-                                       col.new_rand_char(&config);
+                                       col.new_rand_char(config);
                                        col.length -= 1;
                                    } else {
                                        // Display spaces until next stream
@@ -97,7 +97,7 @@ impl Matrix {
                 } else if block.is_space() {
                     // New rand char for head of stream
                     block.new_rand(config);
-                    block.set_white(last_was_white);
+                    last_was_white = block.white();
                     in_stream = false;
                 }
                 // Swapped to "pass on" whiteness and prepare the variable for the next iteration
@@ -140,7 +140,7 @@ impl Matrix {
                 // Draw the character
                 window.attron(COLOR_PAIR(mcolour as u32));
                 //window.addch(self[i][j].val as u32);
-                self[i][j].draw(&window);
+                self[i][j].draw(window);
                 window.attroff(COLOR_PAIR(mcolour as u32));
             }
         }
@@ -176,10 +176,10 @@ impl Column {
         self.col[1].is_space()
     }
     fn new_rand_char(&mut self, config: &Config) {
-        self.col[0] = Block::rand_block(&config);
+        self.col[0] = Block::rand_block(config);
     }
     fn new_rand_head(&mut self, config: &Config) {
-        self.col[0] = Block::rand_block(&config);
+        self.col[0] = Block::rand_block(config);
         // 50/50 chance the head is white
         self.col[0].set_white(coin_flip());
     }
@@ -202,7 +202,7 @@ impl Block {
     fn draw(&self, window: &Window) {
         match *self {
             Block::Ascii((val, _)) => {window.addch(val);},
-            Block::Kana((ref val, _)) => {window.addstr(&val);},
+            Block::Kana((ref val, _)) => {window.addstr(val);},
             Block::Empty => {},
         }
     }
@@ -235,15 +235,13 @@ impl Block {
     }
     pub fn white(&self) -> bool {
         match *self {
-            Block::Ascii((_, white)) => white,
-            Block::Kana((_, white)) => white,
+            Block::Ascii((_, white)) | Block::Kana((_, white)) => white,
             Block::Empty => false
         }
     }
     pub fn set_white(&mut self, new_white: bool) {
         match *self {
-            Block::Ascii((_, mut white)) => white = new_white,
-            Block::Kana((_, mut white)) => white = new_white,
+            Block::Ascii((_, mut _white)) | Block::Kana((_, mut _white)) => _white = new_white,
             Block::Empty => {}
         }
     }
