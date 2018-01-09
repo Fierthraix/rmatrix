@@ -23,7 +23,7 @@ fn rand_char() -> char {
 
 }
 fn coin_flip() -> bool {
-    RNG.with(|rng| (*rng).borrow_mut().gen_weighted_bool(2))
+    RNG.with(|rng| (*rng).borrow_mut().gen())
 }
 
 pub struct Matrix {
@@ -50,28 +50,28 @@ impl Matrix {
         let lines = self.lines;
 
         self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
-            col.spaces != 0
-        {
-            // Decrement the spaces until the next stream starts
-            col.spaces -= 1;
-        } else if col.head_is_empty() && col.spaces == 0 {
-            // Start a new stream
-            col.new_rand_head();
+                                   col.spaces != 0
+                                   {
+                                       // Decrement the spaces until the next stream starts
+                                       col.spaces -= 1;
+                                   } else if col.head_is_empty() && col.spaces == 0 {
+                                       // Start a new stream
+                                       col.new_rand_head();
 
-            // Decrement length of stream
-            col.length -= 1;
+                                       // Decrement length of stream
+                                       col.length -= 1;
 
-            // Reset number of spaces until next stream
-            col.spaces = gen::<usize>() % lines + 1;
-        } else if col.length != 0 {
-            // Continue producing stream
-            col.new_rand_char();
-            col.length -= 1;
-        } else {
-            // Display spaces until next stream
-            col.col[0].val = ' ';
-            col.length = gen::<usize>() % (lines - 3) + 3;
-        });
+                                       // Reset number of spaces until next stream
+                                       col.spaces = gen::<usize>() % lines + 1;
+                                   } else if col.length != 0 {
+                                       // Continue producing stream
+                                       col.new_rand_char();
+                                       col.length -= 1;
+                                   } else {
+                                       // Display spaces until next stream
+                                       col.col[0].val = ' ';
+                                       col.length = gen::<usize>() % (lines - 3) + 3;
+                                   });
         if config.oldstyle {
             self.old_style_move_down();
         } else {
