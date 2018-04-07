@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate structopt;
 extern crate rand;
 extern crate pancurses;
 extern crate term_size;

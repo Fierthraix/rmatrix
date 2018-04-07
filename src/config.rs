@@ -1,8 +1,59 @@
-extern crate clap;
-
 use pancurses::*;
-use self::clap::{Arg, App, ArgMatches};
 
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "rmatrix", about = "Shows a scrolling 'Matrix' like screen in linux")]
+/// The struct for handling command line arguments
+struct Opt {
+
+    #[structopt(short = "b", parse(from_occurrences))]
+    /// Bold characters on
+    bold: isize,
+
+    #[structopt(short = "f", long = "force")]
+    /// Force the linux $TERM type to be on
+    force: bool,
+
+    #[structopt(short = "l", long = "console")]
+    /// Linux mode (use matrix console font)
+    console: bool,
+
+    #[structopt(short ="o", long = "oldstyle")]
+    /// Use old-style scrolling
+    oldstyle: bool,
+
+    #[structopt(short = "s", long = "screensaver")]
+    /// "Screensaver" mode, exits on first keystroke
+    screensaver: bool,
+
+    #[structopt(short = "x", long = "xwindow")]
+    /// X window mode, use if your xterm is using mtx.pcf
+    xwindow: bool,
+
+    #[structopt(short = "u", long = "update", default_value = "4",
+                parse(try_from_str = "validate_update"))]
+    /// Screen update delay
+    update: usize,
+
+    #[structopt(short = "C", long = "colour", default_value = "green",
+            raw(possible_values = r#"&[ "green", "red", "blue", "white", 
+                "yellow", "cyan", "magenta", "black"]"#))]
+    colour: String,
+
+    #[structopt(short = "r", long = "rainbow")]
+    /// Rainbow mode
+    rainbow: bool,
+}
+
+fn validate_update(n: &str) -> Result<usize, &'static str> {
+    if let Ok(n) = n.parse::<usize>() {
+        if n <= 10 { return Ok(n) }
+    }
+    Err("must be a number between 1 and 10")
+}
+
+/// The global state object
 pub struct Config {
     pub bold: isize,
     pub force: bool,
@@ -20,9 +71,9 @@ pub struct Config {
 impl Config {
     /// Get the new config object based on command line arguments
     pub fn new() -> Self {
-        let args = get_args();
+        let opt = Opt::from_args();
 
-        let colour = match args.value_of("colour").unwrap() {
+        let colour = match opt.colour.as_ref() {
             "green" => COLOR_GREEN,
             "red" => COLOR_RED,
             "blue" => COLOR_BLUE,
@@ -34,30 +85,21 @@ impl Config {
             _ => unreachable!(),
         };
 
-        let bold = if args.is_present("nobold") {
-            0
-        } else if args.is_present("B") {
-            2
-        } else if args.is_present("b") {
-            1
-        } else {
-            0
-        };
-
         Config {
-            bold: bold,
-            force: args.is_present("force"),
-            console: args.is_present("console"),
-            oldstyle: args.is_present("oldstyle"),
-            screensaver: args.is_present("screensaver"),
-            xwindow: args.is_present("xwindow"),
-            update: args.value_of("update").unwrap().parse::<usize>().unwrap(),
-            colour: colour,
-            rainbow: args.is_present("rainbow"),
+            bold: opt.bold,
+            force: opt.force,
+            console: opt.console,
+            oldstyle: opt.oldstyle,
+            screensaver: opt.screensaver,
+            xwindow: opt.xwindow,
+            update: opt.update,
+            rainbow: opt.rainbow,
+            colour,
             pause: false,
             should_break: false,
         }
     }
+    /// Update the config based on any keypresses
     pub fn update_from_keypress(&mut self, keypress: char) {
         match keypress {
             'q' => {
@@ -99,79 +141,10 @@ impl Config {
             }
             'p' | 'P' => self.pause = !self.pause,
             '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' => {
-                self.update = keypress as usize - 48
+                self.update = keypress as usize - 48 // Sneaky way to avoid parsing
             }
             _ => {}
         }
     }
 }
 
-/// Get and parse the command line arguments with clap
-fn get_args() -> ArgMatches<'static> {
-    App::new("rmatrix")
-        .version("0.0.1")
-        .about("Shows a scrolling 'Matrix' like screen in linux")
-        .arg(Arg::with_name("b").short("b").group("bold").help(
-            "Bold characters on",
-        ))
-        .arg(Arg::with_name("B").short("B").help(
-            "All bold characters (overrides -b)",
-        ))
-        .arg(Arg::with_name("force").short("f").help(
-            "Force the linux $TERM type to be on",
-        ))
-        .arg(Arg::with_name("console").short("l").help(
-            "Linux mode (use matrix console font)",
-        ))
-        .arg(Arg::with_name("oldstyle").short("o").help(
-            "Use old-style scrolling",
-        ))
-        .arg(Arg::with_name("nobold").short("n").help(
-            "No bold characters (overrides -b and -B, default)",
-        ))
-        .arg(Arg::with_name("screensaver").short("s").help(
-            "\"Screensaver\" mode, exits on first keystroke",
-        ))
-        .arg(Arg::with_name("xwindow").short("x").help(
-            "X window mode, use if your xterm is using mtx.pcf",
-        ))
-        .arg(
-            Arg::with_name("update")
-                .short("u")
-                .value_name("delay")
-                .default_value("4")
-                .validator(|n: String| match n.parse::<u8>() {
-                    Ok(n) => {
-                        if n > 10 {
-                            Err(String::from("the number must be between 0 and 10"))
-                        } else {
-                            Ok(())
-                        }
-                    }
-                    Err(_) => Err(String::from("not a valid number between 0 and 10")),
-                })
-                .hide_default_value(true)
-                .help("delay Screen update delay"),
-        )
-        .arg(
-            Arg::with_name("colour")
-                .short("C")
-                .value_name("color")
-                .default_value("green")
-                .possible_values(
-                    &[
-                        "green",
-                        "red",
-                        "blue",
-                        "white",
-                        "yellow",
-                        "cyan",
-                        "magenta",
-                        "black",
-                    ],
-                )
-                .help("Use this colour for matrix"),
-        )
-        .arg(Arg::with_name("rainbow").short("r").help("Rainbow mode"))
-        .get_matches()
-}
