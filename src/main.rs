@@ -4,7 +4,6 @@ extern crate pancurses;
 extern crate rmatrix;
 extern crate chan_signal;
 
-use std::env;
 use pancurses::*;
 use chan_signal::Signal;
 
@@ -14,14 +13,6 @@ use rmatrix::config::Config;
 fn main() {
     // Get command line args
     let mut config = Config::new();
-
-    // Get `$TERM`
-    let term = env::var("TERM").unwrap_or(String::from(""));
-
-    // Force `$TERM` to be 'linux' if the user asked
-    if config.force && term.as_str() != "linux" {
-        env::set_var("TERM", "linux");
-    }
 
     // Save the terminal state and start up ncurses
     let window = rmatrix::ncurses_init();
@@ -55,32 +46,13 @@ fn main() {
 
         // Handle a keypress
         if let Some(keypress) = window.getch() {
-            // Exit if in screensaver mode
-            if config.screensaver {
-                rmatrix::finish();
-            }
-
-            // Update config based on user input
             if let Input::Character(c) = keypress {
-                config.update_from_keypress(c)
+                config.handle_keypress(c)
             }
-
-            // Check any config changes mean you need to exit the loop
-            if config.should_break {
-                break;
-            }
-
         }
 
         // Updaate and redraw the board
         matrix.arrange(&config);
         matrix.draw(&window, &config);
     }
-
-    // Reset the old `$TERM` value if you changed it
-    if config.force && term.as_str() != "" {
-        env::set_var("TERM", term.as_str());
-    }
-
-    endwin();
 }

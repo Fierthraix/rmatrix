@@ -11,10 +11,6 @@ struct Opt {
     /// Bold characters on
     bold: isize,
 
-    #[structopt(short = "f", long = "force")]
-    /// Force the linux $TERM type to be on
-    force: bool,
-
     #[structopt(short = "l", long = "console")]
     /// Linux mode (use matrix console font)
     console: bool,
@@ -56,7 +52,6 @@ fn validate_update(n: &str) -> Result<usize, &'static str> {
 /// The global state object
 pub struct Config {
     pub bold: isize,
-    pub force: bool,
     pub console: bool,
     pub oldstyle: bool,
     pub screensaver: bool,
@@ -65,7 +60,6 @@ pub struct Config {
     pub colour: i16,
     pub rainbow: bool,
     pub pause: bool,
-    pub should_break: bool,
 }
 
 impl Config {
@@ -87,7 +81,6 @@ impl Config {
 
         Config {
             bold: opt.bold,
-            force: opt.force,
             console: opt.console,
             oldstyle: opt.oldstyle,
             screensaver: opt.screensaver,
@@ -96,14 +89,18 @@ impl Config {
             rainbow: opt.rainbow,
             colour,
             pause: false,
-            should_break: false,
         }
     }
     /// Update the config based on any keypresses
-    pub fn update_from_keypress(&mut self, keypress: char) {
+    pub fn handle_keypress(&mut self, keypress: char) {
+        // Exit if in screensaver mode
+        if self.screensaver {
+            super::finish();
+        }
+
         match keypress {
             'q' => {
-                self.should_break = true;
+                super::finish()
             }
             'b' => self.bold = 1,
             'B' => self.bold = 2,
