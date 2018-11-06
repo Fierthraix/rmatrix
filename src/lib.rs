@@ -138,9 +138,9 @@ impl Matrix {
                     config.colour
                 };
                 // Draw the character
-                window.attron(COLOR_PAIR(mcolour as u32));
-                window.addch(self[i][j].val as u32);
-                window.attroff(COLOR_PAIR(mcolour as u32));
+                window.attron(COLOR_PAIR(mcolour as u64));
+                window.addch(self[i][j].val as u64);
+                window.attroff(COLOR_PAIR(mcolour as u64));
             }
         }
         napms(config.update as i32 * 10);
