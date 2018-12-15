@@ -1,14 +1,28 @@
 #[macro_use]
-extern crate chan;
+extern crate crossbeam_channel as channel;
 extern crate pancurses;
 extern crate rmatrix;
-extern crate chan_signal;
+extern crate signal_hook;
+
+use std::os::raw::c_int;
+use std::thread;
 
 use pancurses::*;
-use chan_signal::Signal;
 
-use rmatrix::Matrix;
 use rmatrix::config::Config;
+use rmatrix::Matrix;
+
+fn notify(signals: &[c_int]) -> Result<channel::Receiver<c_int>, std::io::Error> {
+    let (s, r) = channel::bounded(100);
+    let signals = signal_hook::iterator::Signals::new(signals)?;
+    thread::spawn(move || {
+        for signal in signals.forever() {
+            // TODO handle channel.SendError in result here
+            s.send(signal);
+        }
+    });
+    Ok(r)
+}
 
 fn main() {
     // Get command line args
@@ -18,7 +32,9 @@ fn main() {
     let window = rmatrix::ncurses_init();
 
     // Register for UNIX signals
-    let signal = chan_signal::notify(&[Signal::INT, Signal::WINCH]);
+    // TODO remove expect here
+    let signal = notify(&[signal_hook::SIGINT, signal_hook::SIGWINCH])
+        .expect("Error setting up signal handling.");
 
     // Create the board
     let mut matrix = Matrix::new();
@@ -26,15 +42,15 @@ fn main() {
     // Main event loop
     loop {
         // Check for SIGINT or SIGWINCH
-        chan_select! {
+        select! {
             default => {},
-            signal.recv() -> signal => {
-                if let Some(signal) = signal {
+            recv(signal) -> signal => {
+                if let Ok(signal) = signal {
                     match signal {
                         // Terminate ncurses properly on SIGINT
-                        Signal::INT => rmatrix::finish(),
+                        signal_hook::SIGINT => rmatrix::finish(),
                         // Redraw the screen on SIGWINCH
-                        Signal::WINCH => {
+                        signal_hook::SIGWINCH => {
                             rmatrix::resize_window();
                             matrix = Matrix::new();
                         },

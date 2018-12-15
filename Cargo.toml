@@ -1,12 +1,18 @@
 [package]
 name = "rmatrix"
 version = "0.1.0"
-authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
+authors = [
+  "Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>",
+  "Tom Milligan <tommilligan@users.noreply.github.com>"
+]
+description = "rust port of cmatrix"
+license = "Apache-2.0"
 
 [dependencies]
-rand = "0.3"
-chan = "0.1"
-structopt = "0.2"
-pancurses = "0.13"
-term_size = "0.3"
-chan-signal = "0.3"
+crossbeam-channel = "^0.3.3"
+pancurses = "^0.16.0"
+rand = "^0.6.1"
+rand_xorshift = "^0.1.0"
+signal-hook = "^0.1.6"
+structopt = "^0.2.14"
+term_size = "^0.3.1"

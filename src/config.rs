@@ -3,10 +3,12 @@ use pancurses::*;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "rmatrix", about = "Shows a scrolling 'Matrix' like screen in linux")]
+#[structopt(
+    name = "rmatrix",
+    about = "Shows a scrolling 'Matrix' like screen in linux"
+)]
 /// The struct for handling command line arguments
 struct Opt {
-
     #[structopt(short = "b", parse(from_occurrences))]
     /// Bold characters on
     bold: isize,
@@ -15,7 +17,7 @@ struct Opt {
     /// Linux mode (use matrix console font)
     console: bool,
 
-    #[structopt(short ="o", long = "oldstyle")]
+    #[structopt(short = "o", long = "oldstyle")]
     /// Use old-style scrolling
     oldstyle: bool,
 
@@ -27,14 +29,24 @@ struct Opt {
     /// X window mode, use if your xterm is using mtx.pcf
     xwindow: bool,
 
-    #[structopt(short = "u", long = "update", default_value = "4",
-                parse(try_from_str = "validate_update"))]
+    #[structopt(
+        short = "u",
+        long = "update",
+        default_value = "4",
+        parse(try_from_str = "validate_update")
+    )]
     /// Screen update delay
     update: usize,
 
-    #[structopt(short = "C", long = "colour", default_value = "green",
-            raw(possible_values = r#"&[ "green", "red", "blue", "white", 
-                "yellow", "cyan", "magenta", "black"]"#))]
+    #[structopt(
+        short = "C",
+        long = "colour",
+        default_value = "green",
+        raw(
+            possible_values = r#"&[ "green", "red", "blue", "white", 
+                "yellow", "cyan", "magenta", "black"]"#
+        )
+    )]
     colour: String,
 
     #[structopt(short = "r", long = "rainbow")]
@@ -44,7 +56,9 @@ struct Opt {
 
 fn validate_update(n: &str) -> Result<usize, &'static str> {
     if let Ok(n) = n.parse::<usize>() {
-        if n <= 10 { return Ok(n) }
+        if n <= 10 {
+            return Ok(n);
+        }
     }
     Err("must be a number between 1 and 10")
 }
@@ -99,9 +113,7 @@ impl Config {
         }
 
         match keypress {
-            'q' => {
-                super::finish()
-            }
+            'q' => super::finish(),
             'b' => self.bold = 1,
             'B' => self.bold = 2,
             'n' => self.bold = 0,
@@ -144,4 +156,3 @@ impl Config {
         }
     }
 }
-

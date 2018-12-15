@@ -1,6 +1,7 @@
-extern crate structopt;
-extern crate rand;
 extern crate pancurses;
+extern crate rand;
+extern crate rand_xorshift;
+extern crate structopt;
 extern crate term_size;
 
 pub mod config;
@@ -8,20 +9,24 @@ pub mod config;
 use config::Config;
 
 use pancurses::*;
+use rand::distributions::{Distribution, Standard};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng;
 use std::cell::RefCell;
-use rand::{Rand, Rng, XorShiftRng};
 
 thread_local!{
-    static RNG: RefCell<XorShiftRng> = RefCell::new(rand::weak_rng());
+    static RNG: RefCell<XorShiftRng> = RefCell::new(XorShiftRng::seed_from_u64(0));
 }
 
-fn gen<T: Rand>() -> T {
+fn gen<T>() -> T
+where
+    Standard: Distribution<T>,
+{
     RNG.with(|rng| (*rng).borrow_mut().gen::<T>())
 }
 fn rand_char() -> char {
     let (randnum, randmin) = (93, 33);
     (RNG.with(|rng| (*rng).borrow_mut().gen::<u8>() % randnum + randmin) as char)
-
 }
 fn coin_flip() -> bool {
     RNG.with(|rng| (*rng).borrow_mut().gen())
@@ -50,29 +55,29 @@ impl Matrix {
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
 
-        self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
-                                   col.spaces != 0
-                                   {
-                                       // Decrement the spaces until the next stream starts
-                                       col.spaces -= 1;
-                                   } else if col.head_is_empty() && col.spaces == 0 {
-                                       // Start a new stream
-                                       col.new_rand_head(config);
+        self.m.iter_mut().for_each(|col| {
+            if col.head_is_empty() && col.spaces != 0 {
+                // Decrement the spaces until the next stream starts
+                col.spaces -= 1;
+            } else if col.head_is_empty() && col.spaces == 0 {
+                // Start a new stream
+                col.new_rand_head(config);
 
-                                       // Decrement length of stream
-                                       col.length -= 1;
+                // Decrement length of stream
+                col.length -= 1;
 
-                                       // Reset number of spaces until next stream
-                                       col.spaces = gen::<usize>() % lines + 1;
-                                   } else if col.length != 0 {
-                                       // Continue producing stream
-                                       col.new_rand_char();
-                                       col.length -= 1;
-                                   } else {
-                                       // Display spaces until next stream
-                                       col.col[0].val = ' ';
-                                       col.length = gen::<usize>() % (lines - 3) + 3;
-                                   });
+                // Reset number of spaces until next stream
+                col.spaces = gen::<usize>() % lines + 1;
+            } else if col.length != 0 {
+                // Continue producing stream
+                col.new_rand_char();
+                col.length -= 1;
+            } else {
+                // Display spaces until next stream
+                col.col[0].val = ' ';
+                col.length = gen::<usize>() % (lines - 3) + 3;
+            }
+        });
         if config.oldstyle {
             self.old_style_move_down();
         } else {
@@ -88,7 +93,6 @@ impl Matrix {
             let mut running_color = COLOR_CYAN;
 
             col.col.iter_mut().for_each(|block| {
-
                 if !in_stream {
                     if !block.is_space() {
                         block.val = ' ';
@@ -123,7 +127,7 @@ impl Matrix {
         for j in 1..self.lines {
             for i in 0..self.cols {
                 window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
-                // Pick the colour we need
+                                                       // Pick the colour we need
                 let mcolour = if self[i][j].white {
                     COLOR_WHITE
                 } else {
@@ -149,8 +153,8 @@ impl ops::Index<usize> for Matrix {
 }
 
 pub struct Column {
-    length: usize, // The length of the stream
-    spaces: usize, // The spaces between streams
+    length: usize,   // The length of the stream
+    spaces: usize,   // The spaces between streams
     col: Vec<Block>, // The actual column
 }
 
