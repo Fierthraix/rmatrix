@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
 
 [dependencies]
-rand = "0.3"
-chan = "0.1"
-structopt = "0.2"
-pancurses = "0.13"
-term_size = "0.3"
+rand = { version = "0.7.3", features = ["small_rng"] }
+chan = "0.1.23"
+structopt = "0.2.15"
+pancurses = "0.16.1"
+term_size = "0.3.1"
 chan-signal = "0.3"
