@@ -1,0 +1,30 @@
+version: 2
+jobs:
+  test_stable:
+    docker:
+      - image: circleci/rust:latest
+    steps:
+      - checkout
+      - run: cargo test
+  test_1.31:
+    docker:
+      - image: circleci/rust:1.31
+    steps:
+      - checkout
+      - run: cargo test
+  build:
+    docker:
+      - image: circleci/rust:latest
+    steps:
+      - checkout
+      - run: cargo build --release
+workflows:
+  version: 2
+  test_and_build:
+    jobs:
+      - test_stable
+      - test_1.31
+      - build:
+          requires:
+            - test_stable
+            - test_1.31

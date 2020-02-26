@@ -52,13 +52,14 @@ impl Matrix {
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
 
-        self.m.iter_mut().for_each(|col| {
-            if col.head_is_empty() && col.spaces != 0 {
-                // Decrement the spaces until the next stream starts
-                col.spaces -= 1;
-            } else if col.head_is_empty() && col.spaces == 0 {
-                // Start a new stream
-                col.new_rand_head();
+        self.m.iter_mut().for_each(|col| if col.head_is_empty() &&
+                                   col.spaces != 0
+                                   {
+                                       // Decrement the spaces until the next stream starts
+                                       col.spaces -= 1;
+                                   } else if col.head_is_empty() && col.spaces == 0 {
+                                       // Start a new stream
+                                       col.new_rand_head(config);
 
                 // Decrement length of stream
                 col.length -= 1;
@@ -87,12 +88,14 @@ impl Matrix {
             let mut in_stream = false;
 
             let mut last_was_white = false; // Keep track of white heads
+            let mut running_color = COLOR_CYAN;
 
             col.col.iter_mut().for_each(|block| {
                 if !in_stream {
                     if !block.is_space() {
                         block.val = ' ';
                         in_stream = true; // We're now in a stream
+                        running_color = block.color;
                     }
                 } else if block.is_space() {
                     // New rand char for head of stream
@@ -102,6 +105,7 @@ impl Matrix {
                 }
                 // Swapped to "pass on" whiteness and prepare the variable for the next iteration
                 std::mem::swap(&mut last_was_white, &mut block.white);
+                block.color = running_color;
             })
         })
     }
@@ -121,26 +125,16 @@ impl Matrix {
         for j in 1..self.lines {
             for i in 0..self.cols {
                 window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
-                                                       // Pick the colour we need
-                let mcolour = if config.rainbow {
-                    match gen::<usize>() % 6 {
-                        0 => COLOR_GREEN,
-                        1 => COLOR_BLUE,
-                        2 => COLOR_WHITE,
-                        3 => COLOR_YELLOW,
-                        4 => COLOR_CYAN,
-                        5 => COLOR_MAGENTA,
-                        _ => unreachable!(),
-                    }
-                } else if self[i][j].white {
+                // Pick the colour we need
+                let mcolour = if self[i][j].white {
                     COLOR_WHITE
                 } else {
-                    config.colour
+                    self[i][j].color
                 };
                 // Draw the character
-                window.attron(COLOR_PAIR(mcolour as u32));
-                window.addch(self[i][j].val as u32);
-                window.attroff(COLOR_PAIR(mcolour as u32));
+                window.attron(COLOR_PAIR(mcolour as chtype));
+                window.addch(self[i][j].val as chtype);
+                window.attroff(COLOR_PAIR(mcolour as chtype));
             }
         }
         napms(config.update as i32 * 10);
@@ -176,9 +170,23 @@ impl Column {
     }
     fn new_rand_char(&mut self) {
         self.col[0].val = rand_char();
+        self.col[0].color = self.col[1].color;
     }
-    fn new_rand_head(&mut self) {
+    fn new_rand_head(&mut self, config: &Config) {
         self.col[0].val = rand_char();
+        self.col[0].color = if config.rainbow {
+            match gen::<usize>() % 6 {
+                0 => COLOR_GREEN,
+                1 => COLOR_BLUE,
+                2 => COLOR_WHITE,
+                3 => COLOR_YELLOW,
+                4 => COLOR_CYAN,
+                5 => COLOR_MAGENTA,
+                _ => unreachable!(),
+            }
+        } else {
+            config.colour
+        };
         // 50/50 chance the head is white
         self.col[0].white = coin_flip();
     }
@@ -195,6 +203,7 @@ impl ops::Index<usize> for Column {
 pub struct Block {
     val: char,
     white: bool,
+    color: i16,
 }
 
 impl Block {
@@ -208,6 +217,7 @@ impl Default for Block {
         Block {
             val: ' ',
             white: false,
+            color: COLOR_RED,
         }
     }
 }
