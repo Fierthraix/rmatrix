@@ -1,18 +1,18 @@
 #[macro_use]
 extern crate chan;
+extern crate chan_signal;
 extern crate pancurses;
 extern crate rmatrix;
-extern crate chan_signal;
 
-use pancurses::*;
 use chan_signal::Signal;
+use pancurses::*;
 
-use rmatrix::Matrix;
 use rmatrix::config::Config;
+use rmatrix::Matrix;
 
 fn main() {
     // Get command line args
-    let mut config = Config::new();
+    let mut config = Config::default();
 
     // Save the terminal state and start up ncurses
     let window = rmatrix::ncurses_init();
@@ -45,10 +45,8 @@ fn main() {
         }
 
         // Handle a keypress
-        if let Some(keypress) = window.getch() {
-            if let Input::Character(c) = keypress {
-                config.handle_keypress(c)
-            }
+        if let Some(Input::Character(c)) = window.getch() {
+            config.handle_keypress(c)
         }
 
         // Updaate and redraw the board

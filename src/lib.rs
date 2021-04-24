@@ -1,6 +1,6 @@
-extern crate structopt;
 extern crate pancurses;
 extern crate rand;
+extern crate structopt;
 extern crate term_size;
 
 pub mod config;
@@ -8,9 +8,9 @@ pub mod config;
 use config::Config;
 
 use pancurses::*;
+use rand::distributions::{Distribution, Standard};
 use rand::rngs::SmallRng;
-use rand::distributions::{Standard, Distribution};
-use rand::{SeedableRng, Rng};
+use rand::{Rng, SeedableRng};
 use std::cell::RefCell;
 
 thread_local! {
@@ -18,7 +18,9 @@ thread_local! {
 }
 
 fn gen<T>() -> T
-where Standard: Distribution<T> {
+where
+    Standard: Distribution<T>,
+{
     RNG.with(|rng| (*rng).borrow_mut().gen::<T>())
 }
 fn rand_char() -> char {
@@ -44,40 +46,37 @@ impl Matrix {
         // Create the matrix
         Matrix {
             m: (0..cols).map(|_| Column::new(lines)).collect(),
-            cols: cols,
-            lines: lines,
+            cols,
+            lines,
         }
     }
     /// Make the next iteration of matrix
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
 
-        self.m.iter_mut()
-            .for_each(|col| {
-                if col.head_is_empty() &&
-                    col.spaces != 0
-                    {
-                        // Decrement the spaces until the next stream starts
-                        col.spaces -= 1;
-                    } else if col.head_is_empty() && col.spaces == 0 {
-                        // Start a new stream
-                        col.new_rand_head(config);
+        self.m.iter_mut().for_each(|col| {
+            if col.head_is_empty() && col.spaces != 0 {
+                // Decrement the spaces until the next stream starts
+                col.spaces -= 1;
+            } else if col.head_is_empty() && col.spaces == 0 {
+                // Start a new stream
+                col.new_rand_head(config);
 
-                        // Decrement length of stream
-                        col.length -= 1;
+                // Decrement length of stream
+                col.length -= 1;
 
-                        // Reset number of spaces until next stream
-                        col.spaces = gen::<usize>() % lines + 1;
-                    } else if col.length != 0 {
-                        // Continue producing stream
-                        col.new_rand_char();
-                        col.length -= 1;
-                    } else {
-                        // Display spaces until next stream
-                        col.col[0].val = ' ';
-                        col.length = gen::<usize>() % (lines - 3) + 3;
-                    }
-            });
+                // Reset number of spaces until next stream
+                col.spaces = gen::<usize>() % lines + 1;
+            } else if col.length != 0 {
+                // Continue producing stream
+                col.new_rand_char();
+                col.length -= 1;
+            } else {
+                // Display spaces until next stream
+                col.col[0].val = ' ';
+                col.length = gen::<usize>() % (lines - 3) + 3;
+            }
+        });
         if config.oldstyle {
             self.old_style_move_down();
         } else {
@@ -127,7 +126,7 @@ impl Matrix {
         for j in 1..self.lines {
             for i in 0..self.cols {
                 window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
-                // Pick the colour we need
+                                                       // Pick the colour we need
                 let mcolour = if self[i][j].white {
                     COLOR_WHITE
                 } else {
