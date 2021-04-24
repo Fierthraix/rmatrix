@@ -6,9 +6,9 @@ authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
 license = 'GPL-3.0-or-later'
 
 [dependencies]
-rand = { version = "0.7.3", features = ["small_rng"] }
+rand = { version = "0.8.3", features = ["small_rng"] }
 chan = "0.1.23"
-structopt = "0.2.15"
+structopt = "0.3.21"
 pancurses = "0.16.1"
-term_size = "0.3.1"
+term_size = "0.3.2"
 chan-signal = "0.3"

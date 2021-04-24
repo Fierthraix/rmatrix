@@ -33,7 +33,7 @@ struct Opt {
         short = "u",
         long = "update",
         default_value = "4",
-        parse(try_from_str = "validate_update")
+        parse(try_from_str = validate_update)
     )]
     /// Screen update delay
     update: usize,
@@ -42,8 +42,7 @@ struct Opt {
         short = "C",
         long = "colour",
         default_value = "green",
-        raw(possible_values = r#"&[ "green", "red", "blue", "white", 
-                "yellow", "cyan", "magenta", "black"]"#)
+        possible_values = &["green", "red", "blue", "white", "yellow", "cyan", "magenta", "black"]
     )]
     colour: String,
 
