@@ -2,20 +2,20 @@
 extern crate chan;
 extern crate chan_signal;
 extern crate pancurses;
-extern crate rmatrix;
+extern crate r_matrix;
 
 use chan_signal::Signal;
 use pancurses::*;
 
-use rmatrix::config::Config;
-use rmatrix::Matrix;
+use r_matrix::config::Config;
+use r_matrix::Matrix;
 
 fn main() {
     // Get command line args
     let mut config = Config::default();
 
     // Save the terminal state and start up ncurses
-    let window = rmatrix::ncurses_init();
+    let window = r_matrix::ncurses_init();
 
     // Register for UNIX signals
     let signal = chan_signal::notify(&[Signal::INT, Signal::WINCH]);
@@ -32,10 +32,10 @@ fn main() {
                 if let Some(signal) = signal {
                     match signal {
                         // Terminate ncurses properly on SIGINT
-                        Signal::INT => rmatrix::finish(),
+                        Signal::INT => r_matrix::finish(),
                         // Redraw the screen on SIGWINCH
                         Signal::WINCH => {
-                            rmatrix::resize_window();
+                            r_matrix::resize_window();
                             matrix = Matrix::new();
                         },
                         _ => {}

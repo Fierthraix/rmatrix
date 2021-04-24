@@ -1,7 +1,9 @@
 [package]
-name = "rmatrix"
-version = "0.1.0"
+name = "r-matrix"
+description = "Rust port of cmatrix."
+version = "0.1.1"
 authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
+license = 'GPL-3.0-or-later'
 
 [dependencies]
 rand = { version = "0.7.3", features = ["small_rng"] }
