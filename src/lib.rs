@@ -37,9 +37,9 @@ pub struct Matrix {
     lines: usize,
 }
 
-impl Matrix {
+impl Default for Matrix {
     /// Create a new matrix with the dimensions of the screen
-    pub fn new() -> Self {
+    fn default() -> Self {
         // Get the screen dimensions
         let (lines, cols) = get_term_size();
 
@@ -50,6 +50,9 @@ impl Matrix {
             lines,
         }
     }
+}
+
+impl Matrix {
     /// Make the next iteration of matrix
     pub fn arrange(&mut self, config: &Config) {
         let lines = self.lines;
@@ -114,8 +117,8 @@ impl Matrix {
         // Iterate over all columns and swap spaces
         self.m.iter_mut().for_each(|col| {
             let mut tmp = Block::default(); // Blank space at head
-            col.col.iter_mut().for_each(|mut block| {
-                std::mem::swap(&mut tmp, &mut block);
+            col.col.iter_mut().for_each(|block| {
+                std::mem::swap(&mut tmp, block);
             })
         });
     }

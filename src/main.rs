@@ -32,14 +32,14 @@ fn main() {
     flag::register(SIGQUIT, Arc::clone(&exit_signal)).unwrap();
 
     // Create the board
-    let mut matrix: Matrix = Matrix::new();
+    let mut matrix: Matrix = Matrix::default();
 
     // Main event loop
     loop {
         // SIGWINCH: Make a new matrix for the new terminal size.
         if resize_signal.swap(false, Ordering::Relaxed) {
             r_matrix::resize_window();
-            matrix = Matrix::new();
+            matrix = Matrix::default();
         }
         // Exit the program on exit signals (SIGINT, SIGTERM, SIGQUIT).
         if exit_signal.swap(false, Ordering::Relaxed) {
