@@ -1,13 +1,14 @@
 [package]
 name = "r-matrix"
 description = "Rust port of cmatrix."
-version = "0.2.0"
+version = "0.2.1"
+edition = "2021"
 authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
 license = 'GPL-3.0-or-later'
 
 [dependencies]
 pancurses = "0.16.1"
-rand = { version = "0.8.3", features = ["small_rng"] }
-signal-hook = { version = "0.3.8", features = ["extended-siginfo"] }
-structopt = "0.3.21"
+rand = { version = "0.8.4", features = ["small_rng"] }
+signal-hook = { version = "0.3.10", features = ["extended-siginfo"] }
+structopt = "0.3.25"
 term_size = "0.3.2"
