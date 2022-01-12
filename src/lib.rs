@@ -7,6 +7,7 @@ use rand::distributions::{Distribution, Standard};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use std::cell::RefCell;
+use std::ops;
 
 thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
@@ -139,8 +140,6 @@ impl Matrix {
         napms(config.update as i32 * 10);
     }
 }
-
-use std::ops;
 
 impl ops::Index<usize> for Matrix {
     type Output = Column;
