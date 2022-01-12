@@ -1,8 +1,3 @@
-extern crate pancurses;
-extern crate rand;
-extern crate structopt;
-extern crate term_size;
-
 pub mod config;
 
 use config::Config;
