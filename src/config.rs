@@ -73,9 +73,9 @@ pub struct Config {
     pub pause: bool,
 }
 
-impl Config {
+impl Default for Config {
     /// Get the new config object based on command line arguments
-    pub fn default() -> Self {
+    fn default() -> Self {
         let opt = Opt::from_args();
 
         let colour = match opt.colour.as_ref() {
@@ -102,6 +102,9 @@ impl Config {
             pause: false,
         }
     }
+}
+
+impl Config {
     /// Update the config based on any keypresses
     pub fn handle_keypress(&mut self, keypress: char) {
         // Exit if in screensaver mode
