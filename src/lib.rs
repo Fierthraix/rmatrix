@@ -1,8 +1,3 @@
-extern crate pancurses;
-extern crate rand;
-extern crate structopt;
-extern crate term_size;
-
 pub mod config;
 
 use config::Config;
@@ -12,6 +7,7 @@ use rand::distributions::{Distribution, Standard};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use std::cell::RefCell;
+use std::ops;
 
 thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
@@ -129,23 +125,34 @@ impl Matrix {
         for j in 1..self.lines {
             for i in 0..self.cols {
                 window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
-                                                       // Pick the colour we need
-                let mcolour = if self[i][j].white {
+
+                let block = &self[i][j];
+
+                let mut attrs = Attributes::new();
+
+                // Pick the colour we need
+                let mcolour = if block.white {
                     COLOR_WHITE
                 } else {
-                    self[i][j].color
+                    block.color
                 };
+                attrs.set_color_pair(ColorPair(mcolour as u8));
+
+                if config.bold == 2
+                    || config.bold == 1 && (block.white || block.val as u32 % 2 == 0)
+                {
+                    attrs.set_bold(true);
+                }
+
                 // Draw the character
-                window.attron(COLOR_PAIR(mcolour as chtype));
-                window.addch(self[i][j].val as chtype);
-                window.attroff(COLOR_PAIR(mcolour as chtype));
+                window.attron(attrs);
+                window.addch(block.val as chtype);
+                window.attroff(attrs);
             }
         }
         napms(config.update as i32 * 10);
     }
 }
-
-use std::ops;
 
 impl ops::Index<usize> for Matrix {
     type Output = Column;

@@ -1,7 +1,3 @@
-extern crate pancurses;
-extern crate r_matrix;
-extern crate signal_hook;
-
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
