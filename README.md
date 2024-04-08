@@ -11,6 +11,9 @@ The rust version is memory-safe, and doesn't crash so easily. Both versions have
 | 1-9 | Speed the letters fall (1 is fastest, 9 is slowest) |
 | Shift + 1-9 | Colour of the characters |
 | r | Rainbow mode |
+| b | Bold characters on |
+| B | All bold characters |
+| n | No bold characters |
 
 ## Installation
 
