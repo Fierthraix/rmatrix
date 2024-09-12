@@ -116,10 +116,9 @@ impl Matrix {
     fn old_style_move_down(&mut self) {
         // Iterate over all columns and swap spaces
         self.m.iter_mut().for_each(|col| {
-            let mut tmp = Block::default(); // Blank space at head
-            col.col.iter_mut().for_each(|block| {
-                std::mem::swap(&mut tmp, block);
-            })
+            col.col.pop_back();
+            col.col.push_back(Block::default()); // Put a Blank space at the head.
+            col.col.rotate_right(1)
         });
     }
     /// Draw the matrix on the screen
@@ -145,6 +144,7 @@ impl Matrix {
     }
 }
 
+use std::collections::VecDeque;
 use std::ops;
 
 impl ops::Index<usize> for Matrix {
@@ -155,9 +155,9 @@ impl ops::Index<usize> for Matrix {
 }
 
 pub struct Column {
-    length: usize,   // The length of the stream
-    spaces: usize,   // The spaces between streams
-    col: Vec<Block>, // The actual column
+    length: usize,        // The length of the stream
+    spaces: usize,        // The spaces between streams
+    col: VecDeque<Block>, // The actual column
 }
 
 impl Column {
@@ -166,7 +166,7 @@ impl Column {
         Column {
             length: gen::<usize>() % (lines - 3) + 3,
             spaces: gen::<usize>() % lines + 1,
-            col: vec![Block::default(); lines],
+            col: (0..lines).map(|_| Block::default()).collect(),
         }
     }
     fn head_is_empty(&self) -> bool {
