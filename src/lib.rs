@@ -3,6 +3,8 @@ extern crate rand;
 extern crate structopt;
 extern crate term_size;
 
+use std::collections::VecDeque;
+
 pub mod config;
 
 use config::Config;
@@ -23,12 +25,86 @@ where
 {
     RNG.with(|rng| (*rng).borrow_mut().gen::<T>())
 }
+
 fn rand_char() -> char {
     let (randnum, randmin) = (93, 33);
     RNG.with(|rng| (*rng).borrow_mut().gen::<u8>() % randnum + randmin) as char
 }
+
 fn coin_flip() -> bool {
     RNG.with(|rng| (*rng).borrow_mut().gen())
+}
+
+#[derive(Clone)]
+pub struct Block {
+    val: char,
+    white: bool,
+    color: i16,
+}
+
+impl Block {
+    fn is_space(&self) -> bool {
+        self.val == ' '
+    }
+}
+
+impl Default for Block {
+    fn default() -> Self {
+        Block {
+            val: ' ',
+            white: false,
+            color: COLOR_RED,
+        }
+    }
+}
+
+pub struct Column {
+    length: usize,        // The length of the stream
+    spaces: usize,        // The spaces between streams
+    col: VecDeque<Block>, // The actual column
+}
+
+impl Column {
+    /// Return a column keyed by a random number generator
+    fn new(lines: usize) -> Self {
+        Column {
+            length: gen::<usize>() % (lines - 3) + 3,
+            spaces: gen::<usize>() % lines + 1,
+            col: (0..lines).map(|_| Block::default()).collect(),
+        }
+    }
+    fn head_is_empty(&self) -> bool {
+        self.col[1].val == ' '
+    }
+    fn new_rand_char(&mut self) {
+        self.col[0].val = rand_char();
+        self.col[0].color = self.col[1].color;
+    }
+    fn new_rand_head(&mut self, config: &Config) {
+        self.col[0].val = rand_char();
+        self.col[0].color = if config.rainbow {
+            match gen::<usize>() % 6 {
+                0 => COLOR_GREEN,
+                1 => COLOR_BLUE,
+                2 => COLOR_WHITE,
+                3 => COLOR_YELLOW,
+                4 => COLOR_CYAN,
+                5 => COLOR_MAGENTA,
+                _ => unreachable!(),
+            }
+        } else {
+            config.colour
+        };
+        // 50/50 chance the head is white
+        self.col[0].white = coin_flip();
+    }
+}
+
+impl std::ops::Index<usize> for Column {
+    type Output = Block;
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.col[i]
+    }
 }
 
 pub struct Matrix {
@@ -123,106 +199,38 @@ impl Matrix {
     }
     /// Draw the matrix on the screen
     pub fn draw(&self, window: &Window, config: &Config) {
-        //TODO: Refactor this to cache mcolour and reduce calls to `attron`/`attroff`
         //TODO: Use an iterator or something nicer
         for j in 1..self.lines {
+            // Saving the last colour allows us to call `attron` only when needed.
+            let mut last_colour: i16 = self[0][j].color;
+            window.attron(COLOR_PAIR(last_colour as chtype));
+
             for i in 0..self.cols {
-                window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
-                                                       // Pick the colour we need
+                // Pick the colour we need
                 let mcolour = if self[i][j].white {
                     COLOR_WHITE
                 } else {
                     self[i][j].color
                 };
-                // Draw the character
-                window.attron(COLOR_PAIR(mcolour as chtype));
+
+                window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
+                if last_colour != mcolour {
+                    // Set the colour in ncurses.
+                    window.attron(COLOR_PAIR(mcolour as chtype));
+                    last_colour = mcolour;
+                }
+                // Draw the character.
                 window.addch(self[i][j].val as chtype);
-                window.attroff(COLOR_PAIR(mcolour as chtype));
             }
         }
         napms(config.update as i32 * 10);
     }
 }
 
-use std::collections::VecDeque;
-use std::ops;
-
-impl ops::Index<usize> for Matrix {
+impl std::ops::Index<usize> for Matrix {
     type Output = Column;
     fn index(&self, i: usize) -> &Self::Output {
         &self.m[i]
-    }
-}
-
-pub struct Column {
-    length: usize,        // The length of the stream
-    spaces: usize,        // The spaces between streams
-    col: VecDeque<Block>, // The actual column
-}
-
-impl Column {
-    /// Return a column keyed by a random number generator
-    fn new(lines: usize) -> Self {
-        Column {
-            length: gen::<usize>() % (lines - 3) + 3,
-            spaces: gen::<usize>() % lines + 1,
-            col: (0..lines).map(|_| Block::default()).collect(),
-        }
-    }
-    fn head_is_empty(&self) -> bool {
-        self.col[1].val == ' '
-    }
-    fn new_rand_char(&mut self) {
-        self.col[0].val = rand_char();
-        self.col[0].color = self.col[1].color;
-    }
-    fn new_rand_head(&mut self, config: &Config) {
-        self.col[0].val = rand_char();
-        self.col[0].color = if config.rainbow {
-            match gen::<usize>() % 6 {
-                0 => COLOR_GREEN,
-                1 => COLOR_BLUE,
-                2 => COLOR_WHITE,
-                3 => COLOR_YELLOW,
-                4 => COLOR_CYAN,
-                5 => COLOR_MAGENTA,
-                _ => unreachable!(),
-            }
-        } else {
-            config.colour
-        };
-        // 50/50 chance the head is white
-        self.col[0].white = coin_flip();
-    }
-}
-
-impl ops::Index<usize> for Column {
-    type Output = Block;
-    fn index(&self, i: usize) -> &Self::Output {
-        &self.col[i]
-    }
-}
-
-#[derive(Clone)]
-pub struct Block {
-    val: char,
-    white: bool,
-    color: i16,
-}
-
-impl Block {
-    fn is_space(&self) -> bool {
-        self.val == ' '
-    }
-}
-
-impl Default for Block {
-    fn default() -> Self {
-        Block {
-            val: ' ',
-            white: false,
-            color: COLOR_RED,
-        }
     }
 }
 
