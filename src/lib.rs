@@ -109,8 +109,13 @@ impl std::ops::Index<usize> for Column {
 
 pub struct Matrix {
     m: Vec<Column>,
-    cols: usize,
-    lines: usize,
+}
+
+impl std::ops::Index<usize> for Matrix {
+    type Output = Column;
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.m[i]
+    }
 }
 
 impl Default for Matrix {
@@ -122,16 +127,22 @@ impl Default for Matrix {
         // Create the matrix
         Matrix {
             m: (0..cols).map(|_| Column::new(lines)).collect(),
-            cols,
-            lines,
         }
     }
 }
 
 impl Matrix {
+    fn num_columns(&self) -> usize {
+        self.m.len()
+    }
+
+    fn num_lines(&self) -> usize {
+        self[0].col.len()
+    }
+
     /// Make the next iteration of matrix
     pub fn arrange(&mut self, config: &Config) {
-        let lines = self.lines;
+        let lines = self.num_lines();
 
         self.m.iter_mut().for_each(|col| {
             if col.head_is_empty() && col.spaces != 0 {
@@ -200,12 +211,12 @@ impl Matrix {
     /// Draw the matrix on the screen
     pub fn draw(&self, window: &Window, config: &Config) {
         //TODO: Use an iterator or something nicer
-        for j in 1..self.lines {
-            // Saving the last colour allows us to call `attron` only when needed.
+        for j in 1..self.num_lines() {
+            // Saving the last colour allows us to call `attron` only when the colour changes.
             let mut last_colour: i16 = self[0][j].color;
             window.attron(COLOR_PAIR(last_colour as chtype));
 
-            for i in 0..self.cols {
+            for i in 0..self.num_columns() {
                 // Pick the colour we need
                 let mcolour = if self[i][j].white {
                     COLOR_WHITE
@@ -224,13 +235,6 @@ impl Matrix {
             }
         }
         napms(config.update as i32 * 10);
-    }
-}
-
-impl std::ops::Index<usize> for Matrix {
-    type Output = Column;
-    fn index(&self, i: usize) -> &Self::Output {
-        &self.m[i]
     }
 }
 

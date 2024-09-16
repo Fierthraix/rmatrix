@@ -1,7 +1,7 @@
 [package]
 name = "r-matrix"
 description = "Rust port of cmatrix."
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
 license = 'GPL-3.0-or-later'
