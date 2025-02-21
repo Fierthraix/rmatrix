@@ -19,20 +19,20 @@ thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
 }
 
-fn gen<T>() -> T
+fn rng<T>() -> T
 where
     Standard: Distribution<T>,
 {
-    RNG.with(|rng| (*rng).borrow_mut().gen::<T>())
+    RNG.with(|rng| (*rng).borrow_mut().r#gen::<T>())
 }
 
 fn rand_char() -> char {
     let (randnum, randmin) = (93, 33);
-    RNG.with(|rng| (*rng).borrow_mut().gen::<u8>() % randnum + randmin) as char
+    RNG.with(|rng| (*rng).borrow_mut().r#gen::<u8>() % randnum + randmin) as char
 }
 
 fn coin_flip() -> bool {
-    RNG.with(|rng| (*rng).borrow_mut().gen())
+    RNG.with(|rng| (*rng).borrow_mut().r#gen())
 }
 
 #[derive(Clone)]
@@ -68,8 +68,8 @@ impl Column {
     /// Return a column keyed by a random number generator
     fn new(lines: usize) -> Self {
         Column {
-            length: gen::<usize>() % (lines - 3) + 3,
-            spaces: gen::<usize>() % lines + 1,
+            length: rng::<usize>() % (lines - 3) + 3,
+            spaces: rng::<usize>() % lines + 1,
             col: (0..lines).map(|_| Block::default()).collect(),
         }
     }
@@ -83,7 +83,7 @@ impl Column {
     fn new_rand_head(&mut self, config: &Config) {
         self.col[0].val = rand_char();
         self.col[0].color = if config.rainbow {
-            match gen::<usize>() % 6 {
+            match rng::<usize>() % 6 {
                 0 => COLOR_GREEN,
                 1 => COLOR_BLUE,
                 2 => COLOR_WHITE,
@@ -156,7 +156,7 @@ impl Matrix {
                 col.length -= 1;
 
                 // Reset number of spaces until next stream
-                col.spaces = gen::<usize>() % lines + 1;
+                col.spaces = rng::<usize>() % lines + 1;
             } else if col.length != 0 {
                 // Continue producing stream
                 col.new_rand_char();
@@ -164,7 +164,7 @@ impl Matrix {
             } else {
                 // Display spaces until next stream
                 col.col[0].val = ' ';
-                col.length = gen::<usize>() % (lines - 3) + 3;
+                col.length = rng::<usize>() % (lines - 3) + 3;
             }
         });
         if config.oldstyle {
