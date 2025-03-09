@@ -4,6 +4,7 @@ extern crate signal_hook;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::{thread::sleep, time::Duration};
 
 use pancurses::*;
 use signal_hook::consts::signal::{SIGINT, SIGQUIT, SIGTERM, SIGWINCH};
@@ -51,8 +52,12 @@ fn main() {
             config.handle_keypress(c)
         }
 
-        // Update and redraw the board.
-        matrix.arrange(&config);
-        matrix.draw(&window, &config);
+        if !config.pause {
+            // Update and redraw the board.
+            matrix.arrange(&config);
+            matrix.draw(&window, &config);
+        } else {
+            sleep(Duration::from_millis(100))
+        }
     }
 }
