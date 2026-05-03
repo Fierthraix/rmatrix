@@ -52,10 +52,10 @@ struct Opt {
 }
 
 fn validate_update(n: &str) -> Result<usize, &'static str> {
-    if let Ok(n) = n.parse::<usize>() {
-        if n <= 10 {
-            return Ok(n);
-        }
+    if let Ok(n) = n.parse::<usize>()
+        && n <= 10
+    {
+        return Ok(n);
     }
     Err("must be a number between 1 and 10")
 }
