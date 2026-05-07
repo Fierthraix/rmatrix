@@ -18,4 +18,10 @@ The rust version is memory-safe, and doesn't crash so easily. Both versions have
 `cargo install r-matrix`
 
 ### Arch Linux
+Install the stable crates.io release from the AUR:
+
 `yay -S rmatrix`
+
+Or install the latest source build from git:
+
+`yay -S rmatrix-git`
