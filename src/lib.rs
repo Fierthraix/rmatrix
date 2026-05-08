@@ -1,19 +1,25 @@
-extern crate pancurses;
+extern crate crossterm;
 extern crate rand;
 extern crate structopt;
-extern crate term_size;
 
+use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::io::{self, Stdout, Write};
+use std::thread;
+use std::time::Duration;
 
 pub mod config;
 
 use config::Config;
 
-use pancurses::*;
+use crossterm::cursor;
+use crossterm::event::{self, Event};
+use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
+use crossterm::terminal::{self, Clear, ClearType};
+use crossterm::{execute, queue};
 use rand::distributions::{Distribution, Standard};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
-use std::cell::RefCell;
 
 thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
@@ -35,11 +41,38 @@ fn coin_flip() -> bool {
     RNG.with(|rng| (*rng).borrow_mut().r#gen())
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MatrixColor {
+    Black,
+    Green,
+    White,
+    Red,
+    Cyan,
+    Magenta,
+    Blue,
+    Yellow,
+}
+
+impl MatrixColor {
+    fn as_crossterm(self) -> Color {
+        match self {
+            MatrixColor::Black => Color::Black,
+            MatrixColor::Green => Color::Green,
+            MatrixColor::White => Color::White,
+            MatrixColor::Red => Color::Red,
+            MatrixColor::Cyan => Color::Cyan,
+            MatrixColor::Magenta => Color::Magenta,
+            MatrixColor::Blue => Color::Blue,
+            MatrixColor::Yellow => Color::Yellow,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Block {
     val: char,
     white: bool,
-    color: i16,
+    color: MatrixColor,
 }
 
 impl Block {
@@ -53,7 +86,7 @@ impl Default for Block {
         Block {
             val: ' ',
             white: false,
-            color: COLOR_RED,
+            color: MatrixColor::Red,
         }
     }
 }
@@ -84,12 +117,12 @@ impl Column {
         self.col[0].val = rand_char();
         self.col[0].color = if config.rainbow {
             match rng::<usize>() % 6 {
-                0 => COLOR_GREEN,
-                1 => COLOR_BLUE,
-                2 => COLOR_WHITE,
-                3 => COLOR_YELLOW,
-                4 => COLOR_CYAN,
-                5 => COLOR_MAGENTA,
+                0 => MatrixColor::Green,
+                1 => MatrixColor::Blue,
+                2 => MatrixColor::White,
+                3 => MatrixColor::Yellow,
+                4 => MatrixColor::Cyan,
+                5 => MatrixColor::Magenta,
                 _ => unreachable!(),
             }
         } else {
@@ -179,7 +212,7 @@ impl Matrix {
             let mut in_stream = false;
 
             let mut last_was_white = false; // Keep track of white heads
-            let mut running_color = COLOR_CYAN;
+            let mut running_color = MatrixColor::Cyan;
 
             col.col.iter_mut().for_each(|block| {
                 if !in_stream {
@@ -209,82 +242,102 @@ impl Matrix {
         });
     }
     /// Draw the matrix on the screen
-    pub fn draw(&self, window: &Window, config: &Config) {
+    pub fn draw(&self, terminal: &mut Terminal, config: &Config) -> io::Result<()> {
+        let stdout = &mut terminal.stdout;
+
         //TODO: Use an iterator or something nicer
         for j in 1..self.num_lines() {
-            // Saving the last colour allows us to call `attron` only when the colour changes.
-            let mut last_colour: i16 = self[0][j].color;
-            window.attron(COLOR_PAIR(last_colour as chtype));
+            // Saving the last colour allows us to change colour only when the colour changes.
+            let mut last_colour = self[0][j].color;
+            queue!(stdout, SetForegroundColor(last_colour.as_crossterm()))?;
 
             for i in 0..self.num_columns() {
                 // Pick the colour we need
                 let mcolour = if self[i][j].white {
-                    COLOR_WHITE
+                    MatrixColor::White
                 } else {
                     self[i][j].color
                 };
 
-                window.mv(j as i32 - 1, 2 * i as i32); // Move the cursor
+                queue!(stdout, cursor::MoveTo(2 * i as u16, j as u16 - 1))?; // Move the cursor
                 if last_colour != mcolour {
-                    // Set the colour in ncurses.
-                    window.attron(COLOR_PAIR(mcolour as chtype));
+                    // Set the colour in the terminal.
+                    queue!(stdout, SetForegroundColor(mcolour.as_crossterm()))?;
                     last_colour = mcolour;
                 }
                 // Draw the character.
-                window.addch(self[i][j].val as chtype);
+                queue!(stdout, Print(self[i][j].val))?;
             }
         }
-        napms(config.update as i32 * 10);
+        stdout.flush()?;
+        thread::sleep(Duration::from_millis(config.update as u64 * 10));
+        Ok(())
     }
 }
 
-/// Clean up ncurses stuff when we're ready to exit
-pub fn finish() {
-    curs_set(1);
-    endwin();
-    std::process::exit(0);
+/// Terminal state object
+pub struct Terminal {
+    stdout: Stdout,
+    active: bool,
 }
 
-/// ncurses functions calls that set up the screen and set important variables
-pub fn ncurses_init() -> Window {
-    let window = initscr();
-    window.nodelay(true);
-    window.refresh();
+impl Terminal {
+    /// Set up the screen and set important variables
+    pub fn new() -> io::Result<Self> {
+        terminal::enable_raw_mode()?;
 
-    noecho();
-    nonl();
-    cbreak();
-    curs_set(0);
-
-    if has_colors() {
-        start_color();
-        if use_default_colors() != ERR {
-            init_pair(COLOR_BLACK, -1, -1);
-            init_pair(COLOR_GREEN, COLOR_GREEN, -1);
-            init_pair(COLOR_WHITE, COLOR_WHITE, -1);
-            init_pair(COLOR_RED, COLOR_RED, -1);
-            init_pair(COLOR_CYAN, COLOR_CYAN, -1);
-            init_pair(COLOR_MAGENTA, COLOR_MAGENTA, -1);
-            init_pair(COLOR_BLUE, COLOR_BLUE, -1);
-            init_pair(COLOR_YELLOW, COLOR_YELLOW, -1);
-        } else {
-            init_pair(COLOR_BLACK, COLOR_BLACK, COLOR_BLACK);
-            init_pair(COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
-            init_pair(COLOR_WHITE, COLOR_WHITE, COLOR_BLACK);
-            init_pair(COLOR_RED, COLOR_RED, COLOR_BLACK);
-            init_pair(COLOR_CYAN, COLOR_CYAN, COLOR_BLACK);
-            init_pair(COLOR_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
-            init_pair(COLOR_BLUE, COLOR_BLUE, COLOR_BLACK);
-            init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+        let mut stdout = io::stdout();
+        if let Err(error) = execute!(stdout, cursor::Hide, Clear(ClearType::All)) {
+            let _ = terminal::disable_raw_mode();
+            return Err(error);
         }
+
+        Ok(Terminal {
+            stdout,
+            active: true,
+        })
     }
 
-    window
+    /// Return the next terminal event, if one is ready
+    pub fn get_event(&self, timeout: Duration) -> io::Result<Option<Event>> {
+        if event::poll(timeout)? {
+            return Ok(Some(event::read()?));
+        }
+        Ok(None)
+    }
+
+    /// Clean up terminal stuff when we're ready to exit
+    pub fn finish(mut self) -> io::Result<()> {
+        self.restore()
+    }
+
+    /// Clear the terminal when the window changes size
+    pub fn resize_window(&mut self) -> io::Result<()> {
+        execute!(self.stdout, Clear(ClearType::All), cursor::MoveTo(0, 0))?;
+        self.stdout.flush()
+    }
+
+    fn restore(&mut self) -> io::Result<()> {
+        if self.active {
+            let terminal_result = execute!(self.stdout, ResetColor, cursor::Show);
+            let raw_mode_result = terminal::disable_raw_mode();
+            self.active = false;
+            terminal_result?;
+            raw_mode_result?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for Terminal {
+    fn drop(&mut self) {
+        let _ = self.restore();
+    }
 }
 
 fn get_term_size() -> (usize, usize) {
-    match term_size::dimensions() {
-        Some((mut width, mut height)) => {
+    match terminal::size() {
+        Ok((mut width, mut height)) => {
             // Minimum size for terminal
             if width < 10 {
                 width = 10
@@ -294,17 +347,11 @@ fn get_term_size() -> (usize, usize) {
             }
             if width % 2 != 0 {
                 // Makes odd-columned screens print on the rightmost edge
-                (height + 1, (width / 2) + 1)
+                ((height + 1) as usize, (width / 2 + 1) as usize)
             } else {
-                (height + 1, width / 2)
+                ((height + 1) as usize, (width / 2) as usize)
             }
         }
-        None => (10, 10),
+        Err(_) => (10, 10),
     }
-}
-
-pub fn resize_window() {
-    //TODO: Find a way to do this without exiting ncurses
-    endwin();
-    initscr();
 }

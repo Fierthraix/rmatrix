@@ -1,11 +1,11 @@
-use pancurses::*;
-
 use structopt::StructOpt;
+
+use super::MatrixColor;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "rmatrix",
-    about = "Shows a scrolling 'Matrix' like screen in linux"
+    about = "Shows a scrolling 'Matrix' like screen in your terminal"
 )]
 /// The struct for handling command line arguments
 struct Opt {
@@ -68,7 +68,7 @@ pub struct Config {
     pub screensaver: bool,
     pub xwindow: bool,
     pub update: usize,
-    pub colour: i16,
+    pub colour: MatrixColor,
     pub rainbow: bool,
     pub pause: bool,
 }
@@ -79,14 +79,14 @@ impl Default for Config {
         let opt = Opt::from_args();
 
         let colour = match opt.colour.as_ref() {
-            "green" => COLOR_GREEN,
-            "red" => COLOR_RED,
-            "blue" => COLOR_BLUE,
-            "white" => COLOR_WHITE,
-            "yellow" => COLOR_YELLOW,
-            "cyan" => COLOR_CYAN,
-            "magenta" => COLOR_MAGENTA,
-            "black" => COLOR_BLACK,
+            "green" => MatrixColor::Green,
+            "red" => MatrixColor::Red,
+            "blue" => MatrixColor::Blue,
+            "white" => MatrixColor::White,
+            "yellow" => MatrixColor::Yellow,
+            "cyan" => MatrixColor::Cyan,
+            "magenta" => MatrixColor::Magenta,
+            "black" => MatrixColor::Black,
             _ => unreachable!(),
         };
 
@@ -106,46 +106,46 @@ impl Default for Config {
 
 impl Config {
     /// Update the config based on any keypresses
-    pub fn handle_keypress(&mut self, keypress: char) {
+    pub fn handle_keypress(&mut self, keypress: char) -> bool {
         // Exit if in screensaver mode
         if self.screensaver {
-            super::finish();
+            return true;
         }
 
         match keypress {
-            'q' => super::finish(),
+            'q' => return true,
             'b' => self.bold = 1,
             'B' => self.bold = 2,
             'n' => self.bold = 0,
             '!' => {
-                self.colour = COLOR_RED;
+                self.colour = MatrixColor::Red;
                 self.rainbow = false;
             }
             '@' => {
-                self.colour = COLOR_GREEN;
+                self.colour = MatrixColor::Green;
                 self.rainbow = false;
             }
             '#' => {
-                self.colour = COLOR_YELLOW;
+                self.colour = MatrixColor::Yellow;
                 self.rainbow = false;
             }
             '$' => {
-                self.colour = COLOR_BLUE;
+                self.colour = MatrixColor::Blue;
                 self.rainbow = false;
             }
             '%' => {
-                self.colour = COLOR_MAGENTA;
+                self.colour = MatrixColor::Magenta;
                 self.rainbow = false;
             }
             'r' => {
                 self.rainbow = true;
             }
             '^' => {
-                self.colour = COLOR_CYAN;
+                self.colour = MatrixColor::Cyan;
                 self.rainbow = false;
             }
             '&' => {
-                self.colour = COLOR_WHITE;
+                self.colour = MatrixColor::White;
                 self.rainbow = false;
             }
             'p' | 'P' => self.pause = !self.pause,
@@ -154,5 +154,6 @@ impl Config {
             }
             _ => {}
         }
+        false
     }
 }
