@@ -1,15 +1,16 @@
 [package]
 name = "r-matrix"
 description = "Rust port of cmatrix."
-version = "2.0.0"
+version = "2.0.1"
 edition = "2024"
 authors = ["Lucas Rooyakkers <lucas.rooyakkers@protonmail.com>"]
 license = 'GPL-3.0-or-later'
+repository = "https://github.com/Fierthraix/rmatrix"
 
 [dependencies]
 crossterm = "0.29.0"
-rand = { version = "0.8.5", features = ["small_rng"] }
+rand = "0.10.1"
 structopt = "0.3.26"
 
 [target.'cfg(unix)'.dependencies]
-signal-hook = { version = "0.3.17", features = ["extended-siginfo"] }
+signal-hook = { version = "0.4.4", features = ["extended-siginfo"] }

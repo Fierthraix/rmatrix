@@ -5,6 +5,7 @@ extern crate structopt;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::io::{self, Stdout, Write};
+use std::ops::Range;
 use std::thread;
 use std::time::Duration;
 
@@ -17,28 +18,24 @@ use crossterm::event::{self, Event};
 use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
 use crossterm::terminal::{self, Clear, ClearType};
 use crossterm::{execute, queue};
-use rand::distributions::{Distribution, Standard};
+use rand::RngExt;
 use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
 
 thread_local! {
-    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
+    static RNG: RefCell<SmallRng> = RefCell::new(rand::make_rng());
 }
 
-fn rng<T>() -> T
-where
-    Standard: Distribution<T>,
-{
-    RNG.with(|rng| (*rng).borrow_mut().r#gen::<T>())
+fn random_range(range: Range<usize>) -> usize {
+    RNG.with(|rng| (*rng).borrow_mut().random_range(range))
 }
 
 fn rand_char() -> char {
     let (randnum, randmin) = (93, 33);
-    RNG.with(|rng| (*rng).borrow_mut().r#gen::<u8>() % randnum + randmin) as char
+    RNG.with(|rng| (*rng).borrow_mut().random::<u8>() % randnum + randmin) as char
 }
 
 fn coin_flip() -> bool {
-    RNG.with(|rng| (*rng).borrow_mut().r#gen())
+    RNG.with(|rng| (*rng).borrow_mut().random())
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -101,8 +98,8 @@ impl Column {
     /// Return a column keyed by a random number generator
     fn new(lines: usize) -> Self {
         Column {
-            length: rng::<usize>() % (lines - 3) + 3,
-            spaces: rng::<usize>() % lines + 1,
+            length: random_range(3..lines),
+            spaces: random_range(1..lines + 1),
             col: (0..lines).map(|_| Block::default()).collect(),
         }
     }
@@ -116,7 +113,7 @@ impl Column {
     fn new_rand_head(&mut self, config: &Config) {
         self.col[0].val = rand_char();
         self.col[0].color = if config.rainbow {
-            match rng::<usize>() % 6 {
+            match random_range(0..6) {
                 0 => MatrixColor::Green,
                 1 => MatrixColor::Blue,
                 2 => MatrixColor::White,
@@ -189,7 +186,7 @@ impl Matrix {
                 col.length -= 1;
 
                 // Reset number of spaces until next stream
-                col.spaces = rng::<usize>() % lines + 1;
+                col.spaces = random_range(1..lines + 1);
             } else if col.length != 0 {
                 // Continue producing stream
                 col.new_rand_char();
@@ -197,7 +194,7 @@ impl Matrix {
             } else {
                 // Display spaces until next stream
                 col.col[0].val = ' ';
-                col.length = rng::<usize>() % (lines - 3) + 3;
+                col.length = random_range(3..lines);
             }
         });
         if config.oldstyle {
