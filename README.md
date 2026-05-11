@@ -1,4 +1,13 @@
 # rmatrix
+
+[![CI](https://github.com/Fierthraix/rmatrix/actions/workflows/ci.yml/badge.svg)](https://github.com/Fierthraix/rmatrix/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/r-matrix.svg)](https://crates.io/crates/r-matrix)
+[![Downloads](https://img.shields.io/crates/d/r-matrix.svg)](https://crates.io/crates/r-matrix)
+[![Docs.rs](https://docs.rs/r-matrix/badge.svg)](https://docs.rs/r-matrix)
+[![License](https://img.shields.io/crates/l/r-matrix.svg)](LICENSE)
+[![AUR](https://img.shields.io/aur/version/rmatrix)](https://aur.archlinux.org/packages/rmatrix)
+[![AUR Git](https://img.shields.io/aur/version/rmatrix-git)](https://aur.archlinux.org/packages/rmatrix-git)
+
 Generates a 'Matrix'-like screen of falling characters in your terminal
 [![rmatrix](rmatrix.gif)](https://asciinema.org/a/IjJyH88BeocsHvJpKJYqvmnuT)
 
