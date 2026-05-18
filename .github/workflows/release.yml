@@ -138,22 +138,24 @@ jobs:
 
       - name: Configure AUR SSH
         run: |
-          install -dm700 ~/.ssh
-          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur_github_actions
-          chmod 600 ~/.ssh/aur_github_actions
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-          cat > ~/.ssh/config <<'EOF'
-          Host aur.archlinux.org
-            User aur
-            IdentityFile ~/.ssh/aur_github_actions
-            IdentitiesOnly yes
-          EOF
+          install -dm700 "$HOME/.ssh"
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > "$HOME/.ssh/aur_github_actions"
+          chmod 600 "$HOME/.ssh/aur_github_actions"
+          ssh-keyscan -t rsa,ecdsa,ed25519 aur.archlinux.org > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          ssh-keygen -F aur.archlinux.org -f "$HOME/.ssh/known_hosts" >/dev/null
+          ssh -i "$HOME/.ssh/aur_github_actions" \
+            -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes \
+            aur@aur.archlinux.org help >/dev/null
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
 
       - name: Generate and push AUR packages
         run: |
           set -euo pipefail
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur_github_actions -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes"
           source packaging/aur/config.env
           version="${GITHUB_REF_NAME#v}"
           short_sha="${GITHUB_SHA::7}"
