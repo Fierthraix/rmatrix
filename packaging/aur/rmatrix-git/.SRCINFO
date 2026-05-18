@@ -1,0 +1,19 @@
+pkgbase = rmatrix-git
+	pkgdesc = Rust port of cmatrix
+	pkgver = 2.0.2.r0.g0000000
+	pkgrel = 1
+	url = https://github.com/Fierthraix/rmatrix
+	arch = x86_64
+	arch = aarch64
+	license = GPL-3.0-or-later
+	makedepends = cargo
+	makedepends = git
+	depends = gcc-libs
+	depends = glibc
+	provides = rmatrix
+	conflicts = rmatrix
+	conflicts = rmatrix-bin
+	source = rmatrix::git+https://github.com/Fierthraix/rmatrix.git
+	sha256sums = SKIP
+
+pkgname = rmatrix-git

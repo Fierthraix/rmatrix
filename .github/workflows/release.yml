@@ -1,0 +1,212 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish-crate:
+    name: Publish crate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Load release config
+        run: cat packaging/aur/config.env >> "$GITHUB_ENV"
+
+      - name: Verify tag matches crate version
+        run: |
+          version="$(cargo metadata --no-deps --format-version=1 | jq -r --arg crate "$CRATE_NAME" '.packages[] | select(.name == $crate) | .version')"
+          tag="${GITHUB_REF_NAME#v}"
+          test "$version" = "$tag"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Publish crate if needed
+        run: |
+          locked=()
+          if [ -f Cargo.lock ]; then
+            locked=(--locked)
+          fi
+          cargo package "${locked[@]}"
+          if curl -fsS "https://crates.io/api/v1/crates/${CRATE_NAME}/${VERSION}" >/dev/null; then
+            echo "${CRATE_NAME} ${VERSION} is already published"
+          else
+            cargo publish "${locked[@]}" --token "$CARGO_REGISTRY_TOKEN"
+          fi
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  release-binaries:
+    name: Build release binaries
+    runs-on: ubuntu-latest
+    needs: publish-crate
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        uses: taiki-e/install-action@cross
+
+      - name: Load release config
+        run: cat packaging/aur/config.env >> "$GITHUB_ENV"
+
+      - name: Build binary
+        run: |
+          locked=()
+          if [ -f Cargo.lock ]; then
+            locked=(--locked)
+          fi
+          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ]; then
+            cargo build "${locked[@]}" --release --target "${{ matrix.target }}" ${CARGO_BUILD_FLAGS:-}
+          else
+            cross build "${locked[@]}" --release --target "${{ matrix.target }}" ${CARGO_BUILD_FLAGS:-}
+          fi
+
+      - name: Package binary
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          target="${{ matrix.target }}"
+          archive_dir="${AUR_NAME}-${version}-${target}"
+          mkdir -p "dist/${archive_dir}"
+          install -Dm755 "target/${target}/release/${BIN_NAME}" "dist/${archive_dir}/${INSTALL_NAME}"
+          cp README* LICENSE* CHANGELOG* NOTICE* "dist/${archive_dir}/" 2>/dev/null || true
+          tar -C dist -czf "dist/${archive_dir}.tar.gz" "${archive_dir}"
+          sha256sum "dist/${archive_dir}.tar.gz" > "dist/${archive_dir}.tar.gz.sha256"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-release
+          path: dist/*
+          if-no-files-found: error
+
+  github-release:
+    name: Upload GitHub Release assets
+    runs-on: ubuntu-latest
+    needs: release-binaries
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+
+  publish-aur:
+    name: Publish AUR packages
+    runs-on: ubuntu-latest
+    needs: github-release
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Arch packaging tools
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib sudo curl jq
+          useradd -m builder
+          printf 'builder ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/builder
+          chmod 0440 /etc/sudoers.d/builder
+
+      - name: Configure AUR SSH
+        run: |
+          install -dm700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur_github_actions
+          chmod 600 ~/.ssh/aur_github_actions
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<'EOF'
+          Host aur.archlinux.org
+            User aur
+            IdentityFile ~/.ssh/aur_github_actions
+            IdentitiesOnly yes
+          EOF
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Generate and push AUR packages
+        run: |
+          set -euo pipefail
+          source packaging/aur/config.env
+          version="${GITHUB_REF_NAME#v}"
+          short_sha="${GITHUB_SHA::7}"
+          packages=("${AUR_NAME}" "${AUR_NAME}-bin" "${AUR_NAME}-git")
+
+          generate_srcinfo() {
+            local pkg="$1"
+            local dir="$GITHUB_WORKSPACE/packaging/aur/$pkg"
+            chown -R builder:builder "$dir"
+            if [[ "$pkg" == *-git ]]; then
+              sudo -u builder bash -lc "cd '$dir' && makepkg --printsrcinfo > .SRCINFO"
+              return 0
+            fi
+
+            sudo -u builder bash -lc "
+              set -euo pipefail
+              cd '$dir'
+              for attempt in 1 2 3 4 5 6; do
+                if updpkgsums && makepkg --printsrcinfo > .SRCINFO; then
+                  exit 0
+                fi
+                sleep 15
+              done
+              exit 1
+            "
+          }
+
+          publish_pkg() {
+            local pkg="$1"
+            local dir="$GITHUB_WORKSPACE/packaging/aur/$pkg"
+            local clone="/tmp/aur-$pkg"
+
+            sed -i "s/^pkgver=.*/pkgver=${version}/" "$dir/PKGBUILD"
+            sed -i "s/^pkgrel=.*/pkgrel=1/" "$dir/PKGBUILD"
+            if [[ "$pkg" == *-git ]]; then
+              sed -i "s/^pkgver=.*/pkgver=${version}.r0.g${short_sha}/" "$dir/PKGBUILD"
+            fi
+
+            generate_srcinfo "$pkg"
+
+            git clone "ssh://aur@aur.archlinux.org/${pkg}.git" "$clone"
+            cp "$dir/PKGBUILD" "$dir/.SRCINFO" "$clone/"
+            git -C "$clone" config user.name "GitHub Actions"
+            git -C "$clone" config user.email "actions@github.com"
+            git -C "$clone" add PKGBUILD .SRCINFO
+            if git -C "$clone" diff --cached --quiet; then
+              echo "$pkg is already up to date"
+              return 0
+            fi
+            git -C "$clone" commit -m "$pkg: update to ${version}"
+            git -C "$clone" push origin master
+          }
+
+          for pkg in "${packages[@]}"; do
+            publish_pkg "$pkg"
+          done
