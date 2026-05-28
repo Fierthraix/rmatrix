@@ -8,7 +8,6 @@
 [![License](https://img.shields.io/crates/l/r-matrix.svg)](LICENSE)
 [![AUR](https://img.shields.io/aur/version/rmatrix)](https://aur.archlinux.org/packages/rmatrix)
 [![AUR bin](https://img.shields.io/aur/version/rmatrix-bin)](https://aur.archlinux.org/packages/rmatrix-bin)
-[![AUR git](https://img.shields.io/aur/version/rmatrix-git)](https://aur.archlinux.org/packages/rmatrix-git)
 
 Generates a 'Matrix'-like screen of falling characters in your terminal
 [![rmatrix](rmatrix.gif)](https://asciinema.org/a/IjJyH88BeocsHvJpKJYqvmnuT)
@@ -37,7 +36,6 @@ cargo install r-matrix
 ```bash
 yay -S rmatrix
 yay -S rmatrix-bin
-yay -S rmatrix-git
 ```
 
 ### macOS / Homebrew
