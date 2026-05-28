@@ -1,12 +1,14 @@
 # rmatrix
 
 [![CI](https://github.com/Fierthraix/rmatrix/actions/workflows/ci.yml/badge.svg)](https://github.com/Fierthraix/rmatrix/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Fierthraix/rmatrix?display_name=tag)](https://github.com/Fierthraix/rmatrix/releases)
 [![Crates.io](https://img.shields.io/crates/v/r-matrix.svg)](https://crates.io/crates/r-matrix)
 [![Downloads](https://img.shields.io/crates/d/r-matrix.svg)](https://crates.io/crates/r-matrix)
 [![Docs.rs](https://docs.rs/r-matrix/badge.svg)](https://docs.rs/r-matrix)
 [![License](https://img.shields.io/crates/l/r-matrix.svg)](LICENSE)
 [![AUR](https://img.shields.io/aur/version/rmatrix)](https://aur.archlinux.org/packages/rmatrix)
-[![AUR Git](https://img.shields.io/aur/version/rmatrix-git)](https://aur.archlinux.org/packages/rmatrix-git)
+[![AUR bin](https://img.shields.io/aur/version/rmatrix-bin)](https://aur.archlinux.org/packages/rmatrix-bin)
+[![AUR git](https://img.shields.io/aur/version/rmatrix-git)](https://aur.archlinux.org/packages/rmatrix-git)
 
 Generates a 'Matrix'-like screen of falling characters in your terminal
 [![rmatrix](rmatrix.gif)](https://asciinema.org/a/IjJyH88BeocsHvJpKJYqvmnuT)
@@ -24,17 +26,24 @@ This version uses `crossterm` for cross-platform terminal support without needin
 
 ## Installation
 
-### cargo
-`cargo install r-matrix`
+```bash
+cargo install r-matrix
+yay -S rmatrix
+yay -S rmatrix-bin
+yay -S rmatrix-git
+brew tap Fierthraix/tap
+brew install --cask rmatrix
+nix run github:Fierthraix/nur-packages#rmatrix
+```
 
-### Arch Linux
-Install the stable crates.io release from the AUR:
+```powershell
+scoop bucket add fierthraix https://github.com/Fierthraix/scoop-bucket
+scoop install rmatrix
+```
 
-`yay -S rmatrix`
-
-Or install the latest source build from git:
-
-`yay -S rmatrix-git`
+```text
+deb/rpm/apk/tar/zip: https://github.com/Fierthraix/rmatrix/releases
+```
 
 ## Development
 
