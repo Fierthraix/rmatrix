@@ -1,0 +1,95 @@
+version: 2
+
+project_name: rmatrix
+
+builds:
+  - id: rmatrix
+    builder: rust
+    binary: r-matrix
+    targets:
+      - x86_64-unknown-linux-gnu
+      - aarch64-unknown-linux-gnu
+      - x86_64-apple-darwin
+      - aarch64-apple-darwin
+      - x86_64-pc-windows-gnu
+    flags:
+      - --release
+      - --locked
+      - --all-features
+
+archives:
+  - id: archives
+    ids:
+      - rmatrix
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Target }}"
+    wrap_in_directory: "{{ .ProjectName }}-{{ .Version }}-{{ .Target }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README*
+      - LICENSE*
+      - CHANGELOG*
+      - NOTICE*
+
+checksum:
+  name_template: checksums.txt
+
+homebrew_casks:
+  - name: rmatrix
+    ids:
+      - archives
+    repository:
+      owner: Fierthraix
+      name: homebrew-tap
+      token: "{{ .Env.RELEASE_PUBLISH_TOKEN }}"
+    directory: Casks
+    homepage: https://github.com/Fierthraix/rmatrix
+    description: Rust port of cmatrix.
+    license: GPL-3.0-or-later
+    binaries:
+      - r-matrix
+scoops:
+  - name: rmatrix
+    ids:
+      - archives
+    repository:
+      owner: Fierthraix
+      name: scoop-bucket
+      token: "{{ .Env.RELEASE_PUBLISH_TOKEN }}"
+    directory: bucket
+    homepage: https://github.com/Fierthraix/rmatrix
+    description: Rust port of cmatrix.
+    license: GPL-3.0-or-later
+
+nix:
+  - name: rmatrix
+    ids:
+      - archives
+    repository:
+      owner: Fierthraix
+      name: nur-packages
+      token: "{{ .Env.RELEASE_PUBLISH_TOKEN }}"
+    path: pkgs/rmatrix/default.nix
+    homepage: https://github.com/Fierthraix/rmatrix
+    description: Rust port of cmatrix.
+    license: gpl3Plus
+
+nfpms:
+  - id: packages
+    ids:
+      - rmatrix
+    package_name: rmatrix
+    vendor: Fierthraix
+    homepage: https://github.com/Fierthraix/rmatrix
+    maintainer: Fierthraix
+    description: Rust port of cmatrix.
+    license: GPL-3.0-or-later
+    bindir: /usr/bin
+    formats:
+      - deb
+      - rpm
+      - apk
