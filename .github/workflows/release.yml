@@ -113,6 +113,9 @@ jobs:
           install -dm700 "$HOME/.ssh"
           printf '%s' "$AUR_SSH_PRIVATE_KEY_B64" | base64 -d > "$HOME/.ssh/aur_github_actions"
           chmod 600 "$HOME/.ssh/aur_github_actions"
+          test -s "$HOME/.ssh/aur_github_actions"
+          echo "Verify decoded AUR key"
+          ssh-keygen -lf "$HOME/.ssh/aur_github_actions"
           ssh-keyscan -t rsa,ecdsa,ed25519 aur.archlinux.org > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
           ssh-keygen -F aur.archlinux.org -f "$HOME/.ssh/known_hosts" >/dev/null
