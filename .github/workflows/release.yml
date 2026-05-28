@@ -76,6 +76,9 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
+      - name: Keep generated caches outside git state
+        run: rm -rf .zig-cache
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -85,6 +88,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_PUBLISH_TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          ZIG_GLOBAL_CACHE_DIR: ${{ runner.temp }}/zig-cache-global
+          ZIG_LOCAL_CACHE_DIR: ${{ runner.temp }}/zig-cache-local
 
   publish-aur:
     name: Publish AUR packages
@@ -106,7 +111,7 @@ jobs:
       - name: Configure AUR SSH
         run: |
           install -dm700 "$HOME/.ssh"
-          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > "$HOME/.ssh/aur_github_actions"
+          printf '%s' "$AUR_SSH_PRIVATE_KEY_B64" | base64 -d > "$HOME/.ssh/aur_github_actions"
           chmod 600 "$HOME/.ssh/aur_github_actions"
           ssh-keyscan -t rsa,ecdsa,ed25519 aur.archlinux.org > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
@@ -117,7 +122,7 @@ jobs:
             -o StrictHostKeyChecking=yes \
             aur@aur.archlinux.org help >/dev/null
         env:
-          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_SSH_PRIVATE_KEY_B64: ${{ secrets.AUR_SSH_PRIVATE_KEY_B64 }}
 
       - name: Generate and push AUR packages
         run: |
