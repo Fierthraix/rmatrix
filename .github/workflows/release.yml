@@ -39,11 +39,18 @@ jobs:
             locked=(--locked)
           fi
           cargo package "${locked[@]}"
-          if curl -fsS "https://crates.io/api/v1/crates/${CRATE_NAME}/${VERSION}" >/dev/null; then
-            echo "${CRATE_NAME} ${VERSION} is already published"
-          else
-            cargo publish "${locked[@]}" --token "$CARGO_REGISTRY_TOKEN"
+          publish_log="$(mktemp)"
+          publish_status=0
+          cargo publish "${locked[@]}" --token "$CARGO_REGISTRY_TOKEN" >"$publish_log" 2>&1 || publish_status=$?
+          cat "$publish_log"
+          if [ "$publish_status" -eq 0 ]; then
+            exit 0
           fi
+          if grep -E "crate .* already exists|already uploaded" "$publish_log" >/dev/null; then
+            echo "${CRATE_NAME} ${VERSION} is already published"
+            exit 0
+          fi
+          exit "$publish_status"
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 

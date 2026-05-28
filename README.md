@@ -26,23 +26,43 @@ This version uses `crossterm` for cross-platform terminal support without needin
 
 ## Installation
 
+### Cargo
+
 ```bash
 cargo install r-matrix
+```
+
+### Arch Linux / AUR
+
+```bash
 yay -S rmatrix
 yay -S rmatrix-bin
 yay -S rmatrix-git
-brew tap Fierthraix/tap
-brew install --cask rmatrix
-nix run github:Fierthraix/nur-packages#rmatrix
 ```
+
+### macOS / Homebrew
+
+```zsh
+brew install --cask Fierthraix/tap/rmatrix
+```
+
+### Windows / Scoop
 
 ```powershell
 scoop bucket add fierthraix https://github.com/Fierthraix/scoop-bucket
 scoop install rmatrix
 ```
 
+### Nix
+
+```bash
+nix profile install github:Fierthraix/nur-packages#rmatrix
+```
+
+### Release Assets
+
 ```text
-deb/rpm/apk/tar/zip: https://github.com/Fierthraix/rmatrix/releases
+https://github.com/Fierthraix/rmatrix/releases/latest
 ```
 
 ## Development
