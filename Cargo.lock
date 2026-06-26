@@ -347,7 +347,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "r-matrix"
-version = "2.0.3"
+version = "2.0.6"
 dependencies = [
  "clap",
  "crossterm",
