@@ -1,52 +1,51 @@
-use structopt::StructOpt;
+use clap::{ArgAction, Parser};
 
 use super::MatrixColor;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[command(
     name = "rmatrix",
     about = "Shows a scrolling 'Matrix' like screen in your terminal"
 )]
-/// The struct for handling command line arguments
 struct Opt {
-    #[structopt(short = "b", parse(from_occurrences))]
+    #[arg(short = 'b', action = ArgAction::Count)]
     /// Bold characters on
-    bold: isize,
+    bold: u8,
 
-    #[structopt(short = "l", long = "console")]
+    #[arg(short = 'l', long = "console")]
     /// Linux mode (use matrix console font)
     console: bool,
 
-    #[structopt(short = "o", long = "oldstyle")]
+    #[arg(short = 'o', long = "oldstyle")]
     /// Use old-style scrolling
     oldstyle: bool,
 
-    #[structopt(short = "s", long = "screensaver")]
+    #[arg(short = 's', long = "screensaver")]
     /// "Screensaver" mode, exits on first keystroke
     screensaver: bool,
 
-    #[structopt(short = "x", long = "xwindow")]
+    #[arg(short = 'x', long = "xwindow")]
     /// X window mode, use if your xterm is using mtx.pcf
     xwindow: bool,
 
-    #[structopt(
-        short = "u",
+    #[arg(
+        short = 'u',
         long = "update",
         default_value = "4",
-        parse(try_from_str = validate_update)
+        value_parser = validate_update
     )]
     /// Screen update delay
     update: usize,
 
-    #[structopt(
-        short = "C",
+    #[arg(
+        short = 'C',
         long = "colour",
         default_value = "green",
-        possible_values = &["green", "red", "blue", "white", "yellow", "cyan", "magenta", "black"]
+        value_parser = ["green", "red", "blue", "white", "yellow", "cyan", "magenta", "black"]
     )]
     colour: String,
 
-    #[structopt(short = "r", long = "rainbow")]
+    #[arg(short = 'r', long = "rainbow")]
     /// Rainbow mode
     rainbow: bool,
 }
@@ -76,7 +75,7 @@ pub struct Config {
 impl Default for Config {
     /// Get the new config object based on command line arguments
     fn default() -> Self {
-        let opt = Opt::from_args();
+        let opt = Opt::parse();
 
         let colour = match opt.colour.as_ref() {
             "green" => MatrixColor::Green,
@@ -91,7 +90,7 @@ impl Default for Config {
         };
 
         Config {
-            bold: opt.bold,
+            bold: opt.bold as isize,
             console: opt.console,
             oldstyle: opt.oldstyle,
             screensaver: opt.screensaver,

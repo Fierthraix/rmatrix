@@ -8,9 +8,9 @@ license = 'GPL-3.0-or-later'
 repository = "https://github.com/Fierthraix/rmatrix"
 
 [dependencies]
+clap = { version = "4.6.1", features = ["derive"] }
 crossterm = "0.29.0"
 rand = "0.10.1"
-structopt = "0.3.26"
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = { version = "0.4.4", features = ["extended-siginfo"] }
